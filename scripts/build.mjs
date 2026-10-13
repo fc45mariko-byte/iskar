@@ -28,6 +28,15 @@ async function load(file) {
     exported.push(name);
     return `${kind} ${name}`;
   });
+  code = code.replace(/^export\s*\{([^}]*)\};?/gm, (_, names) => {
+    for (const n of names.split(',').map((x) => x.trim()).filter(Boolean)) exported.push(n);
+    return '';
+  });
+  code = code.replace(/^import\s*\*\s*as\s+(\w+)\s+from\s*'([^']+)';/gm, (_, ns, spec) => {
+    const dep = resolve(dirname(file), spec);
+    deps.push(dep);
+    return `const ${ns} = __m[${JSON.stringify(relative(root, dep))}];`;
+  });
   if (/^export\s/m.test(code)) throw new Error(`Unsupported export form in ${file}`);
   for (const d of deps) await load(d);
   modules.set(file, { code, exported });

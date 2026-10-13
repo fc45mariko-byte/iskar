@@ -8,6 +8,7 @@ import { applyEvent, withAge, visibleAppearance } from '../src/appearance/lifecy
 import { identityRecord, portraitRequest, describeAppearance } from '../src/appearance/identity.js';
 import { generateHousehold } from '../src/appearance/family.js';
 import { assignRole, ROLE_GROUPS } from '../src/society/roles.js';
+import { CIVILIZATIONS, CIV_IDS } from '../src/world/civilizations.js';
 import { renderPortrait, featurePalette } from '../src/portrait/svg.js';
 
 const sample = (regionId, settlement, n, tag = 't') =>
@@ -22,15 +23,15 @@ const stats = (people) => {
 };
 
 test('appearance is deterministic per character id', () => {
-  const a = generateAppearance({ id: 'char-42', regionId: 'river-delta', settlement: 'urban' });
-  const b = generateAppearance({ id: 'char-42', regionId: 'river-delta', settlement: 'urban' });
+  const a = generateAppearance({ id: 'char-42', regionId: 'orane', settlement: 'urban' });
+  const b = generateAppearance({ id: 'char-42', regionId: 'orane', settlement: 'urban' });
   assert.deepEqual(a, b);
   assert.equal(renderPortrait(a), renderPortrait(b));
 });
 
 test('appearance generation refuses social/behavioural inputs', () => {
   for (const key of ['occupation', 'socialClass', 'personality', 'politics', 'wealth', 'role']) {
-    assert.throws(() => generateAppearance({ id: 'x', regionId: 'river-delta', [key]: 'anything' }), /not an appearance input/);
+    assert.throws(() => generateAppearance({ id: 'x', regionId: 'orane', [key]: 'anything' }), /not an appearance input/);
   }
 });
 
@@ -109,7 +110,7 @@ test('population previews are representative and visually distinct', () => {
 });
 
 test('aging and events change appearance but never identity traits', () => {
-  const young = generateAppearance({ id: 'life', regionId: 'southern-savanna', age: 22 });
+  const young = generateAppearance({ id: 'life', regionId: 'sahel', age: 22 });
   const old = withAge(young, 75);
   assert.deepEqual(old.skin, young.skin);
   assert.deepEqual(old.face, young.face);
@@ -123,9 +124,9 @@ test('aging and events change appearance but never identity traits', () => {
 });
 
 test('identity record is stable and travels with every image request', () => {
-  const a = generateAppearance({ id: 'ident', regionId: 'western-archipelago', settlement: 'port' });
+  const a = generateAppearance({ id: 'ident', regionId: 'nyrad', settlement: 'port' });
   const id1 = identityRecord(a);
-  const id2 = identityRecord(generateAppearance({ id: 'ident', regionId: 'western-archipelago', settlement: 'port' }));
+  const id2 = identityRecord(generateAppearance({ id: 'ident', regionId: 'nyrad', settlement: 'port' }));
   assert.deepEqual(id1, id2);
   assert.match(id1.descriptor, new RegExp(a.skin.hex));
   const req = portraitRequest(identityRecord(a, 'ref://ident.png'), 'speaking at the harbour assembly');
@@ -135,7 +136,7 @@ test('identity record is stable and travels with every image request', () => {
 });
 
 test('households: children are related to both parents but are distinct individuals', () => {
-  const h = generateHousehold({ id: 'fam-1', regionId: 'river-delta', partnerRegionId: 'northern-uplands' });
+  const h = generateHousehold({ id: 'fam-1', regionId: 'orane', partnerRegionId: 'kaelen' });
   const [p1, p2, ...kids] = h.members;
   const lo = Math.min(p1.skin.tone, p2.skin.tone) - 0.15;
   const hi = Math.max(p1.skin.tone, p2.skin.tone) + 0.15;
@@ -177,4 +178,14 @@ test('portraits render as valid, labelled SVG for every texture and style', () =
     assert.ok(!svg.includes('NaN') && !svg.includes('undefined'), `bad geometry for ${p.id}`);
     assert.ok(svg.includes(p.skin.hex));
   }
+});
+
+test('skin-tone distribution is not a proxy for development level', () => {
+  const dev = CIV_IDS.map((c) => CIVILIZATIONS[c].devIndex);
+  const tone = CIV_IDS.map((c) => stats(sample(c, 'rural', 1500, 'dev')).mean);
+  const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
+  const [md, mt] = [mean(dev), mean(tone)];
+  const cov = dev.reduce((s, d, i) => s + (d - md) * (tone[i] - mt), 0);
+  const r = cov / Math.sqrt(dev.reduce((s, d) => s + (d - md) ** 2, 0) * tone.reduce((s, t) => s + (t - mt) ** 2, 0));
+  assert.ok(Math.abs(r) < 0.5, `development level correlates with mean tone (r = ${r.toFixed(2)})`);
 });

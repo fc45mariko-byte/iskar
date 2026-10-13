@@ -7,11 +7,9 @@
 // overlapping, and every individual gets their own ancestry mix — so every
 // civilization contains meaningful internal diversity.
 //
-// NOTE: region ids below are placeholders for Iskar's civilizations. Replace
-// `REGIONS` with the canonical world data (keeping the same shape) when the
-// civilization definitions are wired in.
 
 import { Rng } from './rng.js';
+import { CIVILIZATIONS } from '../world/civilizations.js';
 
 /**
  * Ancestral pools. Continuous facial parameters are 0..1 means; individual
@@ -19,7 +17,7 @@ import { Rng } from './rng.js';
  */
 export const ANCESTRAL_POOLS = {
   uplander: {
-    label: 'Old Uplander',
+    label: 'Hautes-Terres anciennes',
     tone: { mean: 0.1, sd: 0.08 },
     undertone: { 'warm-golden': 2, neutral: 3, cool: 3, olive: 1, 'reddish-brown': 0.5 },
     hairTexture: { straight: 4, wavy: 4, curly: 2, coily: 0.2 },
@@ -30,7 +28,7 @@ export const ANCESTRAL_POOLS = {
     freckles: 0.22,
   },
   steppe: {
-    label: 'Old Steppe',
+    label: 'Steppe ancienne',
     tone: { mean: 0.3, sd: 0.09 },
     undertone: { 'warm-golden': 4, neutral: 2.5, cool: 1, olive: 2, 'reddish-brown': 1 },
     hairTexture: { straight: 7, wavy: 2.5, curly: 0.6 },
@@ -41,7 +39,7 @@ export const ANCESTRAL_POOLS = {
     freckles: 0.06,
   },
   riverine: {
-    label: 'Old Riverine',
+    label: 'Peuples du fleuve',
     tone: { mean: 0.48, sd: 0.11 },
     undertone: { 'warm-golden': 3, neutral: 2, cool: 1, olive: 3, 'reddish-brown': 1.5 },
     hairTexture: { straight: 2.5, wavy: 4, curly: 3, coily: 1 },
@@ -52,7 +50,7 @@ export const ANCESTRAL_POOLS = {
     freckles: 0.05,
   },
   savanna: {
-    label: 'Old Savanna',
+    label: 'Savane ancienne',
     tone: { mean: 0.88, sd: 0.08 },
     undertone: { 'warm-golden': 2, neutral: 3, cool: 2, olive: 0.5, 'reddish-brown': 3 },
     hairTexture: { 'tightly-coiled': 4, coily: 4, curly: 1.5, wavy: 0.3 },
@@ -63,7 +61,7 @@ export const ANCESTRAL_POOLS = {
     freckles: 0.04,
   },
   islander: {
-    label: 'Old Islander',
+    label: 'Insulaires anciens',
     tone: { mean: 0.63, sd: 0.11 },
     undertone: { 'warm-golden': 3, neutral: 2, cool: 1, olive: 1.5, 'reddish-brown': 2.5 },
     hairTexture: { straight: 2, wavy: 3.5, curly: 3.5, coily: 1.5, 'tightly-coiled': 0.5 },
@@ -74,7 +72,7 @@ export const ANCESTRAL_POOLS = {
     freckles: 0.05,
   },
   plateau: {
-    label: 'Old Plateau',
+    label: 'Plateau ancien',
     tone: { mean: 0.7, sd: 0.1 },
     undertone: { 'warm-golden': 2.5, neutral: 2, cool: 1.5, olive: 2, 'reddish-brown': 2 },
     hairTexture: { straight: 2.5, wavy: 3, curly: 3, coily: 1.5, 'tightly-coiled': 0.6 },
@@ -89,48 +87,16 @@ export const ANCESTRAL_POOLS = {
 export const POOL_IDS = Object.keys(ANCESTRAL_POOLS);
 
 /**
- * Regions / civilizations. `ancestry` is the long-run mixture of pools in the
- * settled population; `neighbors` share border zones; `tradePartners` weight
- * where port-city migrants come from.
+ * Regions are Iskar's civilizations (src/world/civilizations.js). `ancestry`
+ * is the long-run mixture of pools in the settled population; `neighbors`
+ * share border zones; `tradePartners` weight where port-city migrants come from.
  */
-export const REGIONS = {
-  'northern-uplands': {
-    label: 'Northern Uplands',
-    ancestry: { uplander: 0.5, steppe: 0.16, riverine: 0.16, plateau: 0.06, savanna: 0.06, islander: 0.06 },
-    neighbors: ['eastern-steppe', 'river-delta'],
-    tradePartners: { 'river-delta': 3, 'western-archipelago': 2, 'eastern-steppe': 1 },
-  },
-  'eastern-steppe': {
-    label: 'Eastern Steppe',
-    ancestry: { steppe: 0.48, uplander: 0.16, riverine: 0.16, plateau: 0.08, savanna: 0.07, islander: 0.05 },
-    neighbors: ['northern-uplands', 'river-delta', 'southwest-plateau'],
-    tradePartners: { 'river-delta': 3, 'northern-uplands': 1, 'southwest-plateau': 1 },
-  },
-  'river-delta': {
-    label: 'River Delta',
-    ancestry: { riverine: 0.42, uplander: 0.12, steppe: 0.12, savanna: 0.14, islander: 0.1, plateau: 0.1 },
-    neighbors: ['northern-uplands', 'eastern-steppe', 'southern-savanna', 'southwest-plateau'],
-    tradePartners: { 'western-archipelago': 3, 'southern-savanna': 2, 'northern-uplands': 2, 'eastern-steppe': 2 },
-  },
-  'southern-savanna': {
-    label: 'Southern Savanna',
-    ancestry: { savanna: 0.5, riverine: 0.15, plateau: 0.15, islander: 0.1, steppe: 0.05, uplander: 0.05 },
-    neighbors: ['river-delta', 'southwest-plateau'],
-    tradePartners: { 'river-delta': 3, 'western-archipelago': 2, 'southwest-plateau': 1 },
-  },
-  'western-archipelago': {
-    label: 'Western Archipelago',
-    ancestry: { islander: 0.46, savanna: 0.15, riverine: 0.15, uplander: 0.1, steppe: 0.08, plateau: 0.06 },
-    neighbors: ['river-delta'],
-    tradePartners: { 'river-delta': 3, 'southern-savanna': 2, 'northern-uplands': 2 },
-  },
-  'southwest-plateau': {
-    label: 'Southwest Plateau',
-    ancestry: { plateau: 0.44, savanna: 0.2, riverine: 0.14, uplander: 0.1, islander: 0.07, steppe: 0.05 },
-    neighbors: ['southern-savanna', 'river-delta', 'eastern-steppe'],
-    tradePartners: { 'river-delta': 2, 'southern-savanna': 2, 'eastern-steppe': 1 },
-  },
-};
+export const REGIONS = Object.fromEntries(Object.entries(CIVILIZATIONS).map(([id, c]) => [id, {
+  label: c.name,
+  ancestry: c.ancestry,
+  neighbors: c.neighbors,
+  tradePartners: c.tradePartners,
+}]));
 
 export const REGION_IDS = Object.keys(REGIONS);
 
@@ -140,11 +106,11 @@ export const REGION_IDS = Object.keys(REGIONS);
  * `migrants` is the share of first/second-generation arrivals from elsewhere.
  */
 export const SETTLEMENTS = {
-  rural: { label: 'Rural', alpha: 1.3, migrants: 0.03 },
-  town: { label: 'Market town', alpha: 1.2, migrants: 0.07 },
-  urban: { label: 'City', alpha: 1.1, migrants: 0.14 },
-  port: { label: 'Port city', alpha: 0.9, migrants: 0.32 },
-  border: { label: 'Border region', alpha: 1.0, migrants: 0.08 },
+  rural: { label: 'Campagne', alpha: 1.3, migrants: 0.03 },
+  town: { label: 'Bourg', alpha: 1.2, migrants: 0.07 },
+  urban: { label: 'Ville', alpha: 1.1, migrants: 0.14 },
+  port: { label: 'Ville portuaire', alpha: 0.9, migrants: 0.32 },
+  border: { label: 'Région frontalière', alpha: 1.0, migrants: 0.08 },
 };
 
 function blend(a, b, t) {

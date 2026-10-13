@@ -636,7 +636,7 @@ function clothingSvg(ctx, a, g, shoulder, neckW) {
  * Render a portrait.
  * Options: { size, title, background (default true), detail (lower for tiny renders) }
  */
-export function renderPortrait(a, { size = 200, title, background = true, detail = 1 } = {}) {
+export function renderPortrait(a, { size = 200, title, background = true, detail = 1, backdrop = 'day' } = {}) {
   const v = visibleAppearance(a);
   const rng = Rng.stream(a.seed, `portrait:${a.age}:${a.events.length}`);
   const uid = `p${hashString(`${a.seed}|${a.age}|${JSON.stringify(a.events)}|${size}|${background}|${detail}|${title ?? ''}`).toString(36)}`;
@@ -655,9 +655,12 @@ export function renderPortrait(a, { size = 200, title, background = true, detail
   const parts = [];
   if (background) {
     const bgHue = (a.clothingHue + 190) % 360;
-    const bg = ctx.radial([[0, `hsl(${bgHue} 22% 84%)`], [0.7, `hsl(${bgHue} 18% 72%)`], [1, `hsl(${bgHue} 20% 58%)`]], { cx: 0.42, cy: 0.38, r: 0.75 });
+    const dusk = backdrop === 'dusk';
+    const bg = dusk
+      ? ctx.radial([[0, `hsl(${(bgHue + 160) % 360} 16% 34%)`], [0.7, `hsl(${(bgHue + 160) % 360} 18% 20%)`], [1, `hsl(${(bgHue + 160) % 360} 20% 12%)`]], { cx: 0.42, cy: 0.36, r: 0.8 })
+      : ctx.radial([[0, `hsl(${bgHue} 22% 84%)`], [0.7, `hsl(${bgHue} 18% 72%)`], [1, `hsl(${bgHue} 20% 58%)`]], { cx: 0.42, cy: 0.38, r: 0.75 });
     parts.push(`<rect width="200" height="240" fill="${bg}"/>`);
-    parts.push(`<ellipse cx="${cx - 10}" cy="${cy - 20}" rx="80" ry="90" fill="hsl(${bgHue} 30% 92%)" opacity="0.45" filter="${ctx.blur(12)}"/>`);
+    parts.push(`<ellipse cx="${cx - 10}" cy="${cy - 20}" rx="80" ry="90" fill="${dusk ? '#e9c79a' : `hsl(${bgHue} 30% 92%)`}" opacity="${dusk ? 0.16 : 0.45}" filter="${ctx.blur(12)}"/>`);
   }
   const hair = hairSvg(ctx, a, v, g, hairColor, rng, detail);
   parts.push(hair.back);

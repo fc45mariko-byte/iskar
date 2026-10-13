@@ -1,7 +1,8 @@
 # iskar
 
-World simulation for Iskar.
+**Iskar**: a world simulation game set in 1920 (interface in French). It has nine screens: title, world map, civilization panel, region view, character sheet, events and decisions, time controls, analytics, and explorer/historian mode.
 
-- **Iskar Registry** web app (`app/`): atlas, census, registry, character dossiers with a life timeline, households, public life and event scenes. `npm run build` produces a single self-contained `dist/index.html`.
-- Human appearance & skin-tone diversity (spec §19): see [docs/appearance.md](docs/appearance.md).
+- Game overview: [docs/game.md](docs/game.md)
+- Human appearance and skin-tone diversity (spec §19): [docs/appearance.md](docs/appearance.md)
+- `npm run build` produces the whole game as one self-contained file, `dist/index.html`.
 - Tests: `npm test`, `npm run test:ui`.
