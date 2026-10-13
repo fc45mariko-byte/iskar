@@ -13,8 +13,9 @@ How Iskar generates, stores, ages and draws the physical appearance of its peopl
 | `src/appearance/lifecycle.js` | Aging and appearance-changing events; derived visible state. |
 | `src/appearance/identity.js` | Persistent text descriptor + reference-image slot for image-model portraits. |
 | `src/society/roles.js`, `src/society/names.js` | Occupation and name assignment, separate from appearance. |
-| `src/portrait/svg.js`, `src/portrait/scene.js` | Procedural portraits and crowd/event scenes. |
-| `demo/` | Dossier, population preview, household, public-life panels, event illustration. |
+| `src/portrait/svg.js`, `src/portrait/scene.js` | Procedural portraits (directional light, gradient-modelled skin, lids, hair-stroke brows, texture-specific hair, clothing) and event scenes. |
+| `app/` | The Iskar Registry web app: atlas, census, registry, dossier with life timeline, households, public life, events. |
+| `scripts/build.mjs` | Bundles the app into one self-contained HTML file in `dist/`. |
 
 ## Data model
 
@@ -77,6 +78,7 @@ Shading, eye lines, lips and highlights come from each person's own skin colour 
 
 ```
 npm test            # unit + distribution tests
-npm run test:ui     # demo at 360 / 768 / 1280 px, light + dark; screenshots → test/ui/output
-npm run demo        # serve the repo, open http://localhost:8080/demo/
+npm run build       # dist/index.html: the whole app in one file, opens offline
+npm run test:ui     # builds, then checks every view at 390 / 820 / 1440 px, light + dark; screenshots → test/ui/output
+npm start           # serve the repo; app at http://localhost:8080/app/ (ES modules) or /dist/
 ```

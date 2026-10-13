@@ -1,6 +1,7 @@
-// UI check: serves the repo, opens the demo at phone / tablet / desktop widths,
-// verifies layout and portrait coverage, and writes full-page screenshots.
-//   node test/ui/screens.mjs [outDir]
+// UI check for the web app: builds it, serves the repo, opens every view at
+// phone / tablet / desktop widths in light and dark, checks layout, script
+// errors and portrait coverage, exercises the dossier, and saves screenshots.
+//   node test/ui/screens.mjs [outDir] [--dev]   (--dev tests app/ via ES modules)
 import http from 'node:http';
 import { readFile, mkdir } from 'node:fs/promises';
 import { extname, join, resolve } from 'node:path';
@@ -8,12 +9,15 @@ import { createRequire } from 'node:module';
 import { execSync } from 'node:child_process';
 
 const root = resolve(new URL('../..', import.meta.url).pathname);
-const outDir = resolve(process.argv[2] ?? join(root, 'test/ui/output'));
+const args = process.argv.slice(2);
+const dev = args.includes('--dev');
+const outDir = resolve(args.find((a) => !a.startsWith('--')) ?? join(root, 'test/ui/output'));
+if (!dev) execSync('node scripts/build.mjs', { cwd: root, stdio: 'inherit' });
 const require = createRequire(import.meta.url);
 let playwright;
 try { playwright = require('playwright'); } catch { playwright = require(join(execSync('npm root -g').toString().trim(), 'playwright')); }
 
-const types = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css' };
+const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
 const server = http.createServer(async (req, res) => {
   try {
     const path = join(root, decodeURIComponent(new URL(req.url, 'http://x').pathname));
@@ -22,13 +26,14 @@ const server = http.createServer(async (req, res) => {
     res.end(await readFile(path));
   } catch { res.writeHead(404); res.end(); }
 }).listen(0);
-const port = server.address().port;
+const base = `http://localhost:${server.address().port}/${dev ? 'app' : 'dist'}/index.html`;
 
 const viewports = [
-  { name: 'phone', width: 360, height: 780 },
-  { name: 'tablet', width: 768, height: 1024 },
-  { name: 'desktop', width: 1280, height: 900 },
+  { name: 'phone', width: 390, height: 844 },
+  { name: 'tablet', width: 820, height: 1180 },
+  { name: 'desktop', width: 1440, height: 960 },
 ];
+const views = { atlas: 6, census: 12, registry: 24, households: 3, public: 30, events: 13 };
 await mkdir(outDir, { recursive: true });
 const browser = await playwright.chromium.launch();
 let failures = 0;
@@ -39,31 +44,36 @@ for (const scheme of ['light', 'dark']) {
     const page = await browser.newPage({ viewport: vp, colorScheme: scheme });
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
-    page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
-    await page.goto(`http://localhost:${port}/demo/index.html`);
-    await page.waitForSelector('#pop-grid .card');
-    const tag = `${vp.name}/${scheme}`;
-    check(errors.length === 0, `${tag}: no script errors ${errors.join(' | ')}`);
+    page.on('console', (m) => m.type() === 'error' && !/fonts\.g/.test(m.text()) && errors.push(m.text()));
+    await page.goto(base);
+    for (const [view, minPlates] of Object.entries(views)) {
+      const tag = `${vp.name}/${scheme}/${view}`;
+      await page.evaluate((v) => { location.hash = v; }, view);
+      await page.waitForFunction((v) => document.querySelector(`.nav a[href="#${v}"][aria-current="page"]`), view);
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      const plates = await page.locator('.plate, .region-row').count();
+      check(overflow <= 0 && plates >= minPlates, `${tag}: overflow ${overflow}px, ${plates} portraits`);
+      if (scheme === 'light' || view === 'atlas') await page.screenshot({ path: join(outDir, `${vp.name}-${scheme}-${view}.png`), fullPage: true });
+    }
+    // Dossier: open someone from the census, age them, record an event, add to registry.
+    await page.evaluate(() => { location.hash = 'census'; });
+    await page.locator('.plate').nth(3).click();
+    await page.waitForSelector('#d-portrait svg');
+    await page.locator('#d-age').fill('70');
+    await page.locator('#d-age').dispatchEvent('change');
+    await page.locator('#ev-type').selectOption('scar');
+    await page.getByRole('button', { name: 'Record event' }).click();
+    const hist = await page.locator('.history').innerText();
+    check(/Visible scar/.test(hist), `${vp.name}/${scheme}: event recorded`);
+    await page.getByRole('button', { name: 'Add to registry' }).click();
+    check(await page.locator('.chip', { hasText: 'In registry' }).count() === 1, `${vp.name}/${scheme}: added to registry`);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-    check(overflow <= 0, `${tag}: no horizontal scroll (overflow ${overflow}px)`);
-    const counts = await page.evaluate(() => ({
-      pop: document.querySelectorAll('#pop-grid .card svg').length,
-      roles: document.querySelectorAll('#roles .card svg').length,
-      household: document.querySelectorAll('#household .card svg').length,
-      scene: document.querySelectorAll('#scene svg svg').length,
-    }));
-    check(counts.pop === 12 && counts.roles === 30 && counts.household >= 3 && counts.scene === 11, `${tag}: portraits rendered ${JSON.stringify(counts)}`);
-    const tones = await page.evaluate(() => [...document.querySelectorAll('#pop-grid .card')].length);
-    check(tones === 12, `${tag}: preview cards present`);
-    // Interact: pick a dossier subject and apply events.
-    await page.locator('#pop-grid .card').nth(11).click();
-    await page.getByRole('button', { name: 'Add scar' }).click();
-    await page.getByRole('button', { name: '+10 years' }).click();
-    const history = await page.locator('#dos-attrs').innerText();
-    check(/scar at/.test(history), `${tag}: event recorded in dossier`);
-    const overflow2 = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-    check(overflow2 <= 0, `${tag}: no horizontal scroll after interaction`);
-    await page.screenshot({ path: join(outDir, `${vp.name}-${scheme}.png`), fullPage: true });
+    check(overflow <= 0, `${vp.name}/${scheme}/dossier: no horizontal scroll`);
+    await page.screenshot({ path: join(outDir, `${vp.name}-${scheme}-dossier.png`), fullPage: true });
+    await page.getByRole('link', { name: 'Back to registry' }).click();
+    await page.waitForSelector('#f-q');
+    check(await page.locator('.plate').count() === 25, `${vp.name}/${scheme}: registry shows the new resident`);
+    check(errors.length === 0, `${vp.name}/${scheme}: no script errors ${errors.join(' | ')}`);
     await page.close();
   }
 }

@@ -6,8 +6,11 @@
   "description": "Iskar world simulation",
   "scripts": {
     "test": "node --test test/*.test.js",
+    "build": "node scripts/build.mjs",
     "test:ui": "node test/ui/screens.mjs",
-    "demo": "npx http-server . -p 8080 -c-1"
+    "start": "npx http-server . -p 8080 -c-1"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  }
 }

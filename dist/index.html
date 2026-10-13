@@ -1,0 +1,2485 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Iskar Registry</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap">
+<style>
+/* Layout: a registry office — fixed left rail of record books on wide screens,
+   a bottom tab bar on phones; each view is a ledger page of cards and plates. */
+:root {
+  --paper: #eef0ee;
+  --sheet: #fbfcfb;
+  --ink: #18252c;
+  --ink-2: #4f5f66;
+  --rule: #d5dbd9;
+  --verdigris: #2c7a6b;
+  --verdigris-soft: #d7ebe5;
+  --ochre: #b7802c;
+  --map-land: #e3e2d6;
+  --map-sea: #cfdfe3;
+  --focus: #2c7a6b;
+  --shadow: 0 1px 2px rgba(24, 37, 44, .08), 0 6px 20px rgba(24, 37, 44, .06);
+  --display: "Syne", "Avenir Next", "Segoe UI", sans-serif;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --rail: 232px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10181c; --sheet: #172227; --ink: #e6ecea; --ink-2: #9fb0b0; --rule: #2a383d;
+    --verdigris: #5cbfa9; --verdigris-soft: #1c3631; --ochre: #e0a95a; --map-land: #26342f; --map-sea: #142630;
+    --focus: #5cbfa9; --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10181c; --sheet: #172227; --ink: #e6ecea; --ink-2: #9fb0b0; --rule: #2a383d;
+  --verdigris: #5cbfa9; --verdigris-soft: #1c3631; --ochre: #e0a95a; --map-land: #26342f; --map-sea: #142630;
+  --focus: #5cbfa9; --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25); color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.5 var(--body); }
+button, select, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+/* Shell */
+.shell { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr); min-height: 100%; }
+.rail { position: sticky; top: env(safe-area-inset-top, 0px); align-self: start; height: 100vh; padding: 24px 16px; border-right: 1px solid var(--rule); display: flex; flex-direction: column; gap: 24px; background: var(--paper); }
+.brand { display: grid; gap: 2px; padding: 0 8px; }
+.brand b { font-family: var(--display); font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
+.brand span { font-size: 12px; color: var(--ink-2); text-transform: uppercase; letter-spacing: .12em; }
+.nav { display: grid; gap: 2px; }
+.nav a { display: flex; align-items: center; gap: 12px; padding: 9px 10px; border-radius: 8px; color: var(--ink-2); text-decoration: none; font-weight: 700; font-size: 15px; }
+.nav a svg { width: 20px; height: 20px; flex: none; }
+.nav a:hover { color: var(--ink); background: var(--sheet); }
+.nav a[aria-current="page"] { color: var(--verdigris); background: var(--verdigris-soft); }
+.rail-foot { margin-top: auto; font-size: 12px; color: var(--ink-2); padding: 0 8px; display: grid; gap: 8px; }
+.theme-btn { justify-self: start; background: none; border: 1px solid var(--rule); border-radius: 999px; padding: 4px 12px; cursor: pointer; font-size: 12px; }
+main { padding: 32px clamp(16px, 4vw, 48px) 64px; min-width: 0; max-width: 1360px; width: 100%; }
+.view-head { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: end; justify-content: space-between; margin-bottom: 20px; }
+.view-head h1 { font-size: clamp(28px, 4vw, 40px); font-weight: 800; line-height: 1.08; }
+.view-head p { margin: 4px 0 0; color: var(--ink-2); max-width: 62ch; }
+.eyebrow { font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: .12em; color: var(--verdigris); }
+
+/* Controls */
+.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+.field { display: grid; gap: 4px; font-size: 12px; color: var(--ink-2); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; min-width: 0; }
+select, input[type="search"], input[type="text"] { background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; padding: 8px 10px; font-size: 15px; text-transform: none; letter-spacing: 0; font-weight: 400; max-width: 100%; min-width: 0; }
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--rule); border-radius: 10px; background: var(--sheet); padding: 3px; gap: 2px; }
+.seg button { border: 0; background: none; padding: 6px 12px; border-radius: 7px; cursor: pointer; font-size: 14px; color: var(--ink-2); font-weight: 700; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.btn { color: var(--ink); display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--rule); background: var(--sheet); border-radius: 8px; padding: 8px 14px; cursor: pointer; font-weight: 700; font-size: 14px; text-decoration: none; }
+.btn:hover { border-color: var(--verdigris); }
+.btn.primary { background: var(--verdigris); border-color: var(--verdigris); color: var(--sheet); }
+.btn svg { width: 16px; height: 16px; }
+
+/* Panels and cards */
+.panel { background: var(--sheet); border: 1px solid var(--rule); border-radius: 14px; padding: 20px; box-shadow: var(--shadow); min-width: 0; }
+.panel h2 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.panel .sub { color: var(--ink-2); font-size: 14px; margin: 0 0 14px; }
+.stack { display: grid; gap: 20px; }
+.plates { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+.plate { border: 0; padding: 0; background: none; text-align: left; cursor: pointer; display: grid; gap: 8px; min-width: 0; }
+.plate .frame { border-radius: 10px; overflow: hidden; aspect-ratio: 5 / 6; background: var(--rule); box-shadow: var(--shadow); transition: transform .15s ease; }
+.plate .frame > svg { width: 100%; height: 100%; display: block; }
+.plate:hover .frame { transform: translateY(-2px); }
+.plate .who { display: grid; gap: 1px; min-width: 0; }
+.plate .who b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.plate .who span { font-size: 13px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.plate .who .mono { font-size: 11px; color: var(--ink-2); }
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--paper); border: 1px solid var(--rule); color: var(--ink-2); white-space: nowrap; }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; border: 1px solid rgba(0,0,0,.15); flex: none; }
+.example-note { font-size: 13px; color: var(--ink-2); display: flex; gap: 8px; align-items: center; }
+
+/* Atlas */
+.atlas { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.map svg { width: 100%; height: auto; display: block; border-radius: 12px; }
+.map .region { cursor: pointer; }
+.map .region path.land { fill: var(--map-land); stroke: var(--ink-2); stroke-width: 1; stroke-opacity: .35; transition: fill .15s; }
+.map .region:hover path.land, .map .region:focus-visible path.land, .map .region.on path.land { fill: var(--verdigris-soft); }
+.map .label { font-family: var(--display); font-weight: 700; font-size: 16px; fill: var(--ink); }
+.map .sea { fill: var(--map-sea); }
+.region-list { display: grid; gap: 10px; align-content: start; }
+.region-row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center; padding: 10px; border-radius: 10px; border: 1px solid var(--rule); background: var(--sheet); cursor: pointer; text-align: left; }
+.region-row:hover, .region-row.on { border-color: var(--verdigris); }
+.faces { display: flex; }
+.faces svg { width: 40px; height: 48px; border-radius: 8px; border: 2px solid var(--sheet); margin-left: -10px; }
+.faces svg:first-child { margin-left: 0; }
+.region-row b { font-family: var(--display); }
+.tonebar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 6px; }
+.tonebar span { display: block; height: 100%; }
+
+/* Census */
+.census-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 340px); gap: 20px; }
+.chart svg { width: 100%; height: auto; display: block; }
+.chart text { fill: var(--ink-2); font-family: var(--mono); font-size: 12px; }
+.chart .grid line { stroke: var(--rule); }
+.legend { display: grid; gap: 8px; font-size: 14px; }
+.legend div { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.legend .sw { width: 14px; height: 14px; border-radius: 4px; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+.stats div { border-top: 2px solid var(--ink); padding-top: 6px; }
+.stats b { display: block; font-family: var(--mono); font-size: 20px; font-weight: 500; }
+.stats span { font-size: 12px; color: var(--ink-2); }
+
+/* Dossier */
+.dossier { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 24px; align-items: start; }
+.portrait-main { border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); aspect-ratio: 5 / 6; }
+.portrait-main svg { width: 100%; height: 100%; display: block; }
+.timeline { margin-top: 14px; display: grid; gap: 6px; }
+.timeline input[type="range"] { width: 100%; accent-color: var(--verdigris); }
+.timeline .ticks { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink-2); }
+.record-no { font-family: var(--mono); font-size: 13px; color: var(--ink-2); }
+.dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 18px; margin: 0; font-size: 15px; }
+.dl dt { color: var(--ink-2); font-size: 13px; text-transform: uppercase; letter-spacing: .06em; padding-top: 2px; }
+.dl dd { margin: 0; overflow-wrap: anywhere; }
+.ancestry { display: flex; height: 10px; border-radius: 5px; overflow: hidden; margin: 4px 0; }
+.ancestry span { height: 100%; }
+.descriptor { font-family: var(--mono); font-size: 12.5px; line-height: 1.6; background: var(--paper); border: 1px solid var(--rule); border-radius: 10px; padding: 12px; overflow-wrap: anywhere; }
+.event-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+.history { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.history li { display: flex; gap: 10px; font-size: 14px; }
+.history li .mono { color: var(--ink-2); min-width: 54px; }
+
+/* Scenes */
+.scene { border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); aspect-ratio: 16 / 9; }
+.scene > svg { width: 100%; height: 100%; display: block; }
+.caption { font-size: 14px; color: var(--ink-2); margin-top: 10px; }
+
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--paper); padding: 8px 16px; border-radius: 999px; font-size: 14px; z-index: 30; }
+
+@media (max-width: 1100px) {
+  .atlas, .census-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 860px) {
+  .shell { grid-template-columns: minmax(0, 1fr); }
+  .rail { position: fixed; top: auto; bottom: 0; left: 0; right: 0; height: auto; z-index: 20; flex-direction: row; padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px)); border-right: 0; border-top: 1px solid var(--rule); gap: 0; }
+  .brand, .rail-foot { display: none; }
+  .nav { grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); width: 100%; }
+  .nav a { flex-direction: column; gap: 2px; font-size: 10.5px; padding: 6px 2px; text-align: center; }
+  main { padding: 20px 16px 110px; }
+  .mobile-brand { display: flex !important; }
+  .dossier { grid-template-columns: minmax(0, 1fr); }
+  .portrait-main { max-width: 340px; }
+  .plates { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; }
+}
+@media (max-width: 420px) { .plates { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.mobile-brand { display: none; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.mobile-brand b { font-family: var(--display); font-size: 22px; font-weight: 800; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="rail" aria-label="Sections">
+    <div class="brand"><b>Iskar</b><span>Civil Registry</span></div>
+    <nav class="nav" id="nav"></nav>
+    <div class="rail-foot">
+      <button class="theme-btn" id="theme" type="button">Theme: system</button>
+      <span>Appearance is generated from ancestry and place, never from role or status.</span>
+    </div>
+  </aside>
+  <main id="main">
+    <div class="mobile-brand"><b>Iskar Registry</b><button class="theme-btn" id="theme-m" type="button">Theme</button></div>
+    <div id="view"></div>
+  </main>
+</div>
+<script>
+(() => {
+'use strict';
+const __m = {};
+__m["src/appearance/rng.js"] = (() => {
+// Deterministic, seedable randomness. Every subsystem draws from its own named
+// stream so that, e.g., appearance and social-role generation never share state.
+
+function hashString(str) {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  h ^= h >>> 13;
+  h = Math.imul(h, 0x5bd1e995);
+  h ^= h >>> 15;
+  return h >>> 0;
+}
+
+class Rng {
+  constructor(seed) {
+    this.state = (typeof seed === 'number' ? seed : hashString(String(seed))) >>> 0 || 0x9e3779b9;
+  }
+
+  /** Independent child stream: same parent seed + label always yields the same stream. */
+  static stream(seed, label) {
+    return new Rng(hashString(`${seed}::${label}`));
+  }
+
+  next() {
+    // mulberry32
+    let t = (this.state = (this.state + 0x6d2b79f5) >>> 0);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+
+  range(min, max) {
+    return min + (max - min) * this.next();
+  }
+
+  int(min, maxInclusive) {
+    return Math.floor(this.range(min, maxInclusive + 1));
+  }
+
+  chance(p) {
+    return this.next() < p;
+  }
+
+  normal(mean = 0, sd = 1) {
+    let u = 0;
+    while (u === 0) u = this.next();
+    const v = this.next();
+    return mean + sd * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+
+  /** Marsaglia–Tsang gamma sampler (shape k, scale 1). */
+  gamma(k) {
+    if (k < 1) return this.gamma(k + 1) * Math.pow(this.next() || 1e-12, 1 / k);
+    const d = k - 1 / 3;
+    const c = 1 / Math.sqrt(9 * d);
+    for (;;) {
+      let x, v;
+      do {
+        x = this.normal();
+        v = 1 + c * x;
+      } while (v <= 0);
+      v = v * v * v;
+      const u = this.next();
+      if (u < 1 - 0.0331 * x ** 4) return d * v;
+      if (Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) return d * v;
+    }
+  }
+
+  /** Dirichlet sample around `weights` with total concentration `alpha`. */
+  dirichlet(weights, alpha) {
+    const keys = Object.keys(weights);
+    const draws = keys.map((k) => this.gamma(Math.max(1e-3, weights[k] * alpha)));
+    const sum = draws.reduce((a, b) => a + b, 0) || 1;
+    return Object.fromEntries(keys.map((k, i) => [k, draws[i] / sum]));
+  }
+
+  /** Pick a key from a {key: weight} table. */
+  weighted(table) {
+    const entries = Object.entries(table).filter(([, w]) => w > 0);
+    const total = entries.reduce((a, [, w]) => a + w, 0);
+    let r = this.next() * total;
+    for (const [k, w] of entries) {
+      if ((r -= w) <= 0) return k;
+    }
+    return entries[entries.length - 1][0];
+  }
+
+  pick(list) {
+    return list[Math.floor(this.next() * list.length)];
+  }
+}
+
+const clamp = (x, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, x));
+
+return { hashString, Rng, clamp };
+})();
+__m["src/appearance/population.js"] = (() => {
+// Demographic model for physical appearance.
+//
+// Appearance emerges from *ancestral pools* (old population groups of Iskar's
+// deep history) mixed in different proportions in each region, reshaped by
+// settlement type (rural / town / urban / port / border) and by migration.
+// No region maps to a single pool, every pool's distributions are wide and
+// overlapping, and every individual gets their own ancestry mix — so every
+// civilization contains meaningful internal diversity.
+//
+// NOTE: region ids below are placeholders for Iskar's civilizations. Replace
+// `REGIONS` with the canonical world data (keeping the same shape) when the
+// civilization definitions are wired in.
+
+const { Rng } = __m["src/appearance/rng.js"];
+
+/**
+ * Ancestral pools. Continuous facial parameters are 0..1 means; individual
+ * variation (sd) is deliberately larger than the differences between pools.
+ */
+const ANCESTRAL_POOLS = {
+  uplander: {
+    label: 'Old Uplander',
+    tone: { mean: 0.1, sd: 0.08 },
+    undertone: { 'warm-golden': 2, neutral: 3, cool: 3, olive: 1, 'reddish-brown': 0.5 },
+    hairTexture: { straight: 4, wavy: 4, curly: 2, coily: 0.2 },
+    hairColor: { blonde: 1.5, 'ash-blonde': 1.5, 'dark-blonde': 2, brown: 3, 'dark-brown': 2.5, black: 1, red: 0.7, auburn: 0.8, chestnut: 1 },
+    eyeColor: { blue: 2.5, grey: 2, green: 1.5, hazel: 1.5, brown: 2, 'dark-brown': 1, amber: 0.3 },
+    eyelid: { double: 5, hooded: 2.5, 'deep-set': 2.5, monolid: 0.3 },
+    face: { noseWidth: 0.4, noseBridge: 0.62, lipFullness: 0.4, cheekbones: 0.5, jaw: 0.52 },
+    freckles: 0.22,
+  },
+  steppe: {
+    label: 'Old Steppe',
+    tone: { mean: 0.3, sd: 0.09 },
+    undertone: { 'warm-golden': 4, neutral: 2.5, cool: 1, olive: 2, 'reddish-brown': 1 },
+    hairTexture: { straight: 7, wavy: 2.5, curly: 0.6 },
+    hairColor: { black: 6, 'dark-brown': 3, brown: 1, chestnut: 0.4 },
+    eyeColor: { 'dark-brown': 5, brown: 3, hazel: 1, amber: 0.6, green: 0.3, grey: 0.2 },
+    eyelid: { monolid: 4, hooded: 3, double: 2.5, 'deep-set': 0.5 },
+    face: { noseWidth: 0.47, noseBridge: 0.4, lipFullness: 0.45, cheekbones: 0.66, jaw: 0.55 },
+    freckles: 0.06,
+  },
+  riverine: {
+    label: 'Old Riverine',
+    tone: { mean: 0.48, sd: 0.11 },
+    undertone: { 'warm-golden': 3, neutral: 2, cool: 1, olive: 3, 'reddish-brown': 1.5 },
+    hairTexture: { straight: 2.5, wavy: 4, curly: 3, coily: 1 },
+    hairColor: { black: 4, 'dark-brown': 4, brown: 1.5, chestnut: 0.6, auburn: 0.2 },
+    eyeColor: { 'dark-brown': 3.5, brown: 3.5, hazel: 1.5, amber: 1, green: 0.6, grey: 0.2 },
+    eyelid: { double: 4, hooded: 3, 'deep-set': 2, monolid: 0.6 },
+    face: { noseWidth: 0.5, noseBridge: 0.58, lipFullness: 0.52, cheekbones: 0.52, jaw: 0.5 },
+    freckles: 0.05,
+  },
+  savanna: {
+    label: 'Old Savanna',
+    tone: { mean: 0.88, sd: 0.08 },
+    undertone: { 'warm-golden': 2, neutral: 3, cool: 2, olive: 0.5, 'reddish-brown': 3 },
+    hairTexture: { 'tightly-coiled': 4, coily: 4, curly: 1.5, wavy: 0.3 },
+    hairColor: { black: 7, 'dark-brown': 2.5, brown: 0.4 },
+    eyeColor: { 'dark-brown': 7, brown: 2.5, amber: 0.6, hazel: 0.2 },
+    eyelid: { double: 4, hooded: 2.5, 'deep-set': 1.5, monolid: 0.5 },
+    face: { noseWidth: 0.62, noseBridge: 0.42, lipFullness: 0.64, cheekbones: 0.58, jaw: 0.5 },
+    freckles: 0.04,
+  },
+  islander: {
+    label: 'Old Islander',
+    tone: { mean: 0.63, sd: 0.11 },
+    undertone: { 'warm-golden': 3, neutral: 2, cool: 1, olive: 1.5, 'reddish-brown': 2.5 },
+    hairTexture: { straight: 2, wavy: 3.5, curly: 3.5, coily: 1.5, 'tightly-coiled': 0.5 },
+    hairColor: { black: 5, 'dark-brown': 3, brown: 0.8, 'dark-blonde': 0.3, blonde: 0.2 },
+    eyeColor: { 'dark-brown': 5, brown: 3.5, amber: 1, hazel: 0.6 },
+    eyelid: { double: 3.5, hooded: 3, monolid: 1.5, 'deep-set': 1 },
+    face: { noseWidth: 0.57, noseBridge: 0.47, lipFullness: 0.58, cheekbones: 0.6, jaw: 0.56 },
+    freckles: 0.05,
+  },
+  plateau: {
+    label: 'Old Plateau',
+    tone: { mean: 0.7, sd: 0.1 },
+    undertone: { 'warm-golden': 2.5, neutral: 2, cool: 1.5, olive: 2, 'reddish-brown': 2 },
+    hairTexture: { straight: 2.5, wavy: 3, curly: 3, coily: 1.5, 'tightly-coiled': 0.6 },
+    hairColor: { black: 5, 'dark-brown': 3.5, brown: 1, chestnut: 0.4, auburn: 0.15 },
+    eyeColor: { 'dark-brown': 4, brown: 3, hazel: 1.2, amber: 1, green: 0.5, grey: 0.2 },
+    eyelid: { double: 3.5, 'deep-set': 3, hooded: 2.5, monolid: 0.4 },
+    face: { noseWidth: 0.52, noseBridge: 0.66, lipFullness: 0.5, cheekbones: 0.55, jaw: 0.5 },
+    freckles: 0.04,
+  },
+};
+
+const POOL_IDS = Object.keys(ANCESTRAL_POOLS);
+
+/**
+ * Regions / civilizations. `ancestry` is the long-run mixture of pools in the
+ * settled population; `neighbors` share border zones; `tradePartners` weight
+ * where port-city migrants come from.
+ */
+const REGIONS = {
+  'northern-uplands': {
+    label: 'Northern Uplands',
+    ancestry: { uplander: 0.5, steppe: 0.16, riverine: 0.16, plateau: 0.06, savanna: 0.06, islander: 0.06 },
+    neighbors: ['eastern-steppe', 'river-delta'],
+    tradePartners: { 'river-delta': 3, 'western-archipelago': 2, 'eastern-steppe': 1 },
+  },
+  'eastern-steppe': {
+    label: 'Eastern Steppe',
+    ancestry: { steppe: 0.48, uplander: 0.16, riverine: 0.16, plateau: 0.08, savanna: 0.07, islander: 0.05 },
+    neighbors: ['northern-uplands', 'river-delta', 'southwest-plateau'],
+    tradePartners: { 'river-delta': 3, 'northern-uplands': 1, 'southwest-plateau': 1 },
+  },
+  'river-delta': {
+    label: 'River Delta',
+    ancestry: { riverine: 0.42, uplander: 0.12, steppe: 0.12, savanna: 0.14, islander: 0.1, plateau: 0.1 },
+    neighbors: ['northern-uplands', 'eastern-steppe', 'southern-savanna', 'southwest-plateau'],
+    tradePartners: { 'western-archipelago': 3, 'southern-savanna': 2, 'northern-uplands': 2, 'eastern-steppe': 2 },
+  },
+  'southern-savanna': {
+    label: 'Southern Savanna',
+    ancestry: { savanna: 0.5, riverine: 0.15, plateau: 0.15, islander: 0.1, steppe: 0.05, uplander: 0.05 },
+    neighbors: ['river-delta', 'southwest-plateau'],
+    tradePartners: { 'river-delta': 3, 'western-archipelago': 2, 'southwest-plateau': 1 },
+  },
+  'western-archipelago': {
+    label: 'Western Archipelago',
+    ancestry: { islander: 0.46, savanna: 0.15, riverine: 0.15, uplander: 0.1, steppe: 0.08, plateau: 0.06 },
+    neighbors: ['river-delta'],
+    tradePartners: { 'river-delta': 3, 'southern-savanna': 2, 'northern-uplands': 2 },
+  },
+  'southwest-plateau': {
+    label: 'Southwest Plateau',
+    ancestry: { plateau: 0.44, savanna: 0.2, riverine: 0.14, uplander: 0.1, islander: 0.07, steppe: 0.05 },
+    neighbors: ['southern-savanna', 'river-delta', 'eastern-steppe'],
+    tradePartners: { 'river-delta': 2, 'southern-savanna': 2, 'eastern-steppe': 1 },
+  },
+};
+
+const REGION_IDS = Object.keys(REGIONS);
+
+/**
+ * Settlement types. `alpha` is the Dirichlet concentration of individual
+ * ancestry around the local mixture (lower = more individual variation);
+ * `migrants` is the share of first/second-generation arrivals from elsewhere.
+ */
+const SETTLEMENTS = {
+  rural: { label: 'Rural', alpha: 1.3, migrants: 0.03 },
+  town: { label: 'Market town', alpha: 1.2, migrants: 0.07 },
+  urban: { label: 'City', alpha: 1.1, migrants: 0.14 },
+  port: { label: 'Port city', alpha: 0.9, migrants: 0.32 },
+  border: { label: 'Border region', alpha: 1.0, migrants: 0.08 },
+};
+
+function blend(a, b, t) {
+  const out = {};
+  for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) {
+    out[k] = (a[k] ?? 0) * (1 - t) + (b[k] ?? 0) * t;
+  }
+  return out;
+}
+
+/** The local population mixture for a region + settlement (before individual variation). */
+function localMixture(regionId, settlement = 'rural', { borderWith } = {}) {
+  const region = REGIONS[regionId];
+  if (!region) throw new Error(`Unknown region: ${regionId}`);
+  if (settlement === 'border') {
+    const other = REGIONS[borderWith ?? region.neighbors[0]];
+    return blend(region.ancestry, other.ancestry, 0.45);
+  }
+  return { ...region.ancestry };
+}
+
+/**
+ * Sample one individual's ancestry weights. Uses its own RNG; nothing about
+ * occupation, class or personality is an input.
+ */
+function sampleAncestry(rng, regionId, settlement = 'rural', opts = {}) {
+  const s = SETTLEMENTS[settlement];
+  if (!s) throw new Error(`Unknown settlement: ${settlement}`);
+  let base = localMixture(regionId, settlement, opts);
+  let origin = regionId;
+  if (rng.chance(s.migrants)) {
+    const partners = settlement === 'port'
+      ? Object.fromEntries(REGION_IDS.filter((r) => r !== regionId).map((r) => [r, 1 + (REGIONS[regionId].tradePartners[r] ?? 0)]))
+      : REGIONS[regionId].tradePartners;
+    origin = rng.weighted(partners);
+    base = { ...REGIONS[origin].ancestry };
+  }
+  // Mixed-heritage households: a share of people have one parent line from elsewhere.
+  const intermarriage = { rural: 0.06, town: 0.1, urban: 0.16, port: 0.25, border: 0.3 }[settlement];
+  if (rng.chance(intermarriage)) {
+    const other = rng.pick(REGION_IDS.filter((r) => r !== origin));
+    base = blend(base, REGIONS[other].ancestry, 0.5);
+  }
+  return { weights: rng.dirichlet(base, s.alpha), origin };
+}
+
+return { ANCESTRAL_POOLS, POOL_IDS, REGIONS, REGION_IDS, SETTLEMENTS, localMixture, sampleAncestry };
+})();
+__m["src/appearance/traits.js"] = (() => {
+// Structured appearance vocabulary. These are descriptive visual categories used
+// for rendering and text descriptions — not biological classifications, and they
+// carry no meaning for personality, status, ability or behaviour.
+
+const { clamp } = __m["src/appearance/rng.js"];
+
+/**
+ * Skin tone is stored as a continuous value `tone` in [0, 1]
+ * (0 = very light ivory, 1 = very dark brown). Categories are derived from it
+ * for display and filtering only.
+ */
+const SKIN_TONE_CATEGORIES = [
+  { id: 'very-light', label: 'Very light ivory / pale beige', min: 0.0, max: 0.14 },
+  { id: 'light', label: 'Light beige / peach-brown', min: 0.14, max: 0.28 },
+  { id: 'light-olive', label: 'Light olive / golden beige', min: 0.28, max: 0.42 },
+  { id: 'medium', label: 'Medium beige / honey / caramel', min: 0.42, max: 0.58 },
+  { id: 'medium-brown', label: 'Medium brown / warm chestnut', min: 0.58, max: 0.75 },
+  { id: 'deep', label: 'Deep brown / dark umber / very dark brown', min: 0.75, max: 1.0001 },
+];
+
+function skinToneCategory(tone) {
+  return SKIN_TONE_CATEGORIES.find((c) => tone >= c.min && tone < c.max) ?? SKIN_TONE_CATEGORIES.at(-1);
+}
+
+// Anchor colours along the tone axis (sRGB), interpolated in linear light.
+const TONE_ANCHORS = [
+  [0.0, '#f7e4d6'],
+  [0.08, '#f0d5c0'],
+  [0.18, '#e6c0a2'],
+  [0.28, '#d9ab84'],
+  [0.38, '#cb9a6c'],
+  [0.48, '#b9835a'],
+  [0.58, '#a26c46'],
+  [0.68, '#8a5636'],
+  [0.78, '#6e4129'],
+  [0.88, '#52301f'],
+  [1.0, '#3a2116'],
+];
+
+const UNDERTONES = ['warm-golden', 'neutral', 'cool', 'olive', 'reddish-brown'];
+
+// Multiplicative RGB shifts applied to the base tone colour.
+const UNDERTONE_SHIFT = {
+  'warm-golden': [1.03, 1.02, 0.9],
+  neutral: [1, 1, 1],
+  cool: [1.02, 0.97, 1.04],
+  olive: [0.96, 1.02, 0.9],
+  'reddish-brown': [1.06, 0.95, 0.92],
+};
+
+const HAIR_TEXTURES = ['straight', 'wavy', 'curly', 'coily', 'tightly-coiled'];
+
+const HAIR_COLORS = {
+  black: '#1b1512',
+  'dark-brown': '#33231a',
+  brown: '#55392a',
+  chestnut: '#6e3f24',
+  auburn: '#8a3b1f',
+  red: '#a8492a',
+  'dark-blonde': '#9a7748',
+  blonde: '#cfae74',
+  'ash-blonde': '#b7a587',
+};
+
+const EYE_COLORS = {
+  'dark-brown': '#2c1a10',
+  brown: '#4e2e19',
+  amber: '#8b5a1c',
+  hazel: '#6b5a2e',
+  green: '#4f6b3a',
+  grey: '#6f7a80',
+  blue: '#4a6f99',
+};
+
+const EYELIDS = ['monolid', 'hooded', 'double', 'deep-set'];
+const FACE_SHAPES = ['oval', 'round', 'square', 'heart', 'long', 'diamond'];
+const BUILDS = ['slight', 'lean', 'average', 'sturdy', 'broad', 'heavy'];
+const PRESENTATIONS = ['feminine', 'masculine', 'androgynous'];
+
+/** Hairstyles grouped by which textures they suit; most are open to all. */
+const HAIRSTYLES = {
+  shaved: HAIR_TEXTURES,
+  'close-crop': HAIR_TEXTURES,
+  short: HAIR_TEXTURES,
+  shoulder: HAIR_TEXTURES,
+  long: HAIR_TEXTURES,
+  bun: HAIR_TEXTURES,
+  topknot: HAIR_TEXTURES,
+  braids: HAIR_TEXTURES,
+  locs: ['wavy', 'curly', 'coily', 'tightly-coiled'],
+  afro: ['curly', 'coily', 'tightly-coiled'],
+  twists: ['curly', 'coily', 'tightly-coiled'],
+  headwrap: HAIR_TEXTURES,
+};
+
+function stylesForTexture(texture) {
+  return Object.entries(HAIRSTYLES)
+    .filter(([, textures]) => textures.includes(texture))
+    .map(([style]) => style);
+}
+
+// ---------------------------------------------------------------------------
+// Colour helpers
+
+function hexToRgb(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function rgbToHex([r, g, b]) {
+  return '#' + [r, g, b].map((v) => Math.round(clamp(v, 0, 255)).toString(16).padStart(2, '0')).join('');
+}
+
+const toLinear = (c) => {
+  c /= 255;
+  return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+};
+const toSrgb = (c) => 255 * (c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055);
+
+function mixHex(a, b, t) {
+  const ra = hexToRgb(a).map(toLinear);
+  const rb = hexToRgb(b).map(toLinear);
+  return rgbToHex(ra.map((v, i) => toSrgb(v + (rb[i] - v) * t)));
+}
+
+function shadeHex(hex, factor) {
+  // factor < 1 darkens, > 1 lightens (in linear light)
+  return rgbToHex(hexToRgb(hex).map((c) => toSrgb(clamp(toLinear(c) * factor, 0, 1))));
+}
+
+function skinHex(tone, undertone = 'neutral') {
+  const t = clamp(tone);
+  let i = 0;
+  while (i < TONE_ANCHORS.length - 2 && t > TONE_ANCHORS[i + 1][0]) i++;
+  const [t0, c0] = TONE_ANCHORS[i];
+  const [t1, c1] = TONE_ANCHORS[i + 1];
+  const base = hexToRgb(mixHex(c0, c1, (t - t0) / (t1 - t0)));
+  // Undertone shifts are softened at the very light end, where they otherwise read as yellow or grey.
+  const strength = 0.45 + 0.55 * clamp(t / 0.3);
+  const shift = UNDERTONE_SHIFT[undertone] ?? UNDERTONE_SHIFT.neutral;
+  return rgbToHex(base.map((v, k) => v * (1 + (shift[k] - 1) * strength)));
+}
+
+function relativeLuminance(hex) {
+  const [r, g, b] = hexToRgb(hex).map(toLinear);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+return { SKIN_TONE_CATEGORIES, skinToneCategory, UNDERTONES, HAIR_TEXTURES, HAIR_COLORS, EYE_COLORS, EYELIDS, FACE_SHAPES, BUILDS, PRESENTATIONS, HAIRSTYLES, stylesForTexture, hexToRgb, rgbToHex, mixHex, shadeHex, skinHex, relativeLuminance };
+})();
+__m["src/appearance/generator.js"] = (() => {
+// Appearance generation.
+//
+// Deliberately takes ONLY: identity seed, region/settlement (demographic
+// context), optional explicit ancestry, age and presentation. It never sees
+// occupation, social class, personality, politics or any simulation state, and
+// nothing downstream may derive those from appearance. See src/society/roles.js.
+
+const { Rng, clamp } = __m["src/appearance/rng.js"];
+const { ANCESTRAL_POOLS, sampleAncestry } = __m["src/appearance/population.js"];
+const { skinToneCategory, skinHex, UNDERTONES, HAIR_TEXTURES, HAIR_COLORS, EYE_COLORS, EYELIDS, FACE_SHAPES, BUILDS, PRESENTATIONS, stylesForTexture } = __m["src/appearance/traits.js"];
+
+const APPEARANCE_VERSION = 1;
+const FACE_KEYS = ['noseWidth', 'noseBridge', 'lipFullness', 'cheekbones', 'jaw'];
+const ALLOWED_INPUTS = new Set(['id', 'seed', 'regionId', 'settlement', 'borderWith', 'ancestry', 'age', 'presentation']);
+
+function poolTrait(rng, weights, key) {
+  const pool = ANCESTRAL_POOLS[rng.weighted(weights)];
+  return rng.weighted(pool[key]);
+}
+
+function mixedMean(weights, get) {
+  let sum = 0;
+  for (const [p, w] of Object.entries(weights)) sum += w * get(ANCESTRAL_POOLS[p]);
+  return sum;
+}
+
+function hairstyleFor(rng, texture, presentation) {
+  const styles = stylesForTexture(texture);
+  // Fashion preferences only — never tied to status or region stereotypes.
+  const bias = {
+    feminine: { long: 3, shoulder: 2.5, braids: 2.5, bun: 2, locs: 1.5, afro: 1.5, twists: 1.5, headwrap: 1, short: 1, topknot: 0.7, 'close-crop': 0.6, shaved: 0.2 },
+    masculine: { short: 3, 'close-crop': 3, shaved: 1.2, locs: 1.2, braids: 1, topknot: 1, afro: 1, twists: 1, long: 0.8, shoulder: 0.8, bun: 0.5, headwrap: 0.3 },
+    androgynous: {},
+  }[presentation];
+  return rng.weighted(Object.fromEntries(styles.map((s) => [s, bias[s] ?? 1])));
+}
+
+/** Generate a structured, stable appearance record for one person. */
+function generateAppearance(input) {
+  for (const key of Object.keys(input)) {
+    if (!ALLOWED_INPUTS.has(key)) {
+      throw new Error(`generateAppearance: '${key}' is not an appearance input (appearance is independent of role, status and behaviour)`);
+    }
+  }
+  const { id, regionId, settlement = 'rural', borderWith } = input;
+  const seed = input.seed ?? id;
+  if (seed === undefined) throw new Error('generateAppearance requires an id or seed');
+  const rng = Rng.stream(seed, 'appearance');
+
+  const ancestry = input.ancestry
+    ? { weights: input.ancestry, origin: regionId }
+    : sampleAncestry(rng, regionId, settlement, { borderWith });
+  const w = ancestry.weights;
+
+  const presentation = input.presentation ?? rng.weighted({ feminine: 0.48, masculine: 0.48, androgynous: 0.04 });
+  const bracket = rng.weighted({ '16-24': 18, '25-34': 22, '35-44': 20, '45-54': 16, '55-64': 12, '65-80': 9 });
+  const [lo, hi] = bracket.split('-').map(Number);
+  const age = input.age ?? rng.int(lo, hi);
+
+  // Skin: continuous tone = ancestry-weighted mean + individual variation.
+  const toneSd = Math.sqrt(mixedMean(w, (p) => p.tone.sd ** 2));
+  const tone = clamp(mixedMean(w, (p) => p.tone.mean) + rng.normal(0, toneSd), 0.01, 0.99);
+  const undertone = poolTrait(rng, w, 'undertone');
+
+  const hairTexture = poolTrait(rng, w, 'hairTexture');
+  const hairColor = poolTrait(rng, w, 'hairColor');
+  const eyeColor = poolTrait(rng, w, 'eyeColor');
+  const eyelid = poolTrait(rng, w, 'eyelid');
+
+  const face = { shape: rng.pick(FACE_SHAPES) };
+  for (const k of FACE_KEYS) face[k] = round(clamp(mixedMean(w, (p) => p.face[k]) + rng.normal(0, 0.14)));
+  // Individual proportions, independent of ancestry.
+  face.width = round(rng.range(0, 1));
+  face.length = round(rng.range(0, 1));
+  face.noseLength = round(rng.range(0, 1));
+  face.mouthWidth = round(rng.range(0, 1));
+  face.featureHeight = round(rng.range(0, 1));
+  face.browThickness = round(rng.range(0.15, 0.95));
+  face.browArch = round(rng.range(0, 1));
+  face.earSize = round(rng.range(0.2, 0.8));
+
+  const eyes = { color: eyeColor, lid: eyelid, size: round(rng.range(0.25, 0.85)), tilt: round(rng.range(-0.6, 0.6)), spacing: round(rng.range(0.3, 0.7)) };
+
+  const build = rng.pick(BUILDS);
+  const adultHeight = rng.normal(presentation === 'masculine' ? 174 : presentation === 'feminine' ? 162 : 168, 7);
+  const heightCm = Math.round(age >= 18 ? adultHeight : adultHeight * clamp(0.45 + age * 0.03, 0.45, 1));
+
+  const facialHairPotential = presentation === 'masculine' ? round(rng.range(0.2, 1)) : presentation === 'androgynous' ? round(rng.range(0, 0.4)) : 0;
+  const facialHair = facialHairPotential > 0.35 && age >= 18
+    ? rng.weighted({ none: 3, stubble: 2, moustache: 1, 'short-beard': 2, 'full-beard': 1.5 })
+    : 'none';
+
+  const marks = {
+    freckles: rng.chance(mixedMean(w, (p) => p.freckles)) ? round(rng.range(0.2, 1)) : 0,
+    vitiligo: rng.chance(0.006) ? { patches: rng.int(2, 5), seed: rng.int(1, 1e6) } : null,
+    birthmark: rng.chance(0.04) ? { x: round(rng.range(0.2, 0.8)), y: round(rng.range(0.4, 0.85)) } : null,
+    moles: Array.from({ length: rng.weighted({ 0: 4, 1: 3, 2: 1.5, 3: 0.5 }) | 0 }, () => ({ x: round(rng.range(0.2, 0.8)), y: round(rng.range(0.35, 0.9)) })),
+    dimples: rng.chance(0.18),
+  };
+
+  const aging = {
+    greyingOnset: Math.round(clamp(rng.normal(45, 9), 25, 75)),
+    recession: presentation === 'masculine' ? round(rng.range(0, 1)) : round(rng.range(0, 0.25)),
+    wrinkleRate: round(rng.range(0.6, 1.4)),
+  };
+
+  return {
+    version: APPEARANCE_VERSION,
+    id: id ?? String(seed),
+    seed: String(seed),
+    context: { regionId, settlement, origin: ancestry.origin },
+    ancestry: Object.fromEntries(Object.entries(w).map(([k, v]) => [k, round(v, 3)])),
+    age,
+    presentation,
+    skin: { tone: round(tone, 3), category: skinToneCategory(tone).id, undertone, hex: skinHex(tone, undertone) },
+    hair: { texture: hairTexture, color: hairColor, style: hairstyleFor(rng, hairTexture, presentation) },
+    eyes,
+    face,
+    body: { build, heightCm },
+    facialHair,
+    marks,
+    aging,
+    clothingHue: rng.int(0, 359),
+    events: [],
+  };
+}
+
+function round(x, d = 2) {
+  const f = 10 ** d;
+  return Math.round(x * f) / f;
+}
+
+// ---------------------------------------------------------------------------
+// Distinctness: avoid "the same face with minor changes".
+
+function featureVector(a) {
+  return [
+    a.skin.tone * 2,
+    UNDERTONES.indexOf(a.skin.undertone) / 4,
+    (HAIR_TEXTURES.indexOf(a.hair.texture) / 4) * 1.5,
+    Object.keys(HAIR_COLORS).indexOf(a.hair.color) / 8,
+    Object.keys(EYE_COLORS).indexOf(a.eyes.color) / 6,
+    EYELIDS.indexOf(a.eyes.lid) / 3,
+    ...FACE_KEYS.map((k) => a.face[k]),
+    a.face.width, a.face.length, a.face.noseLength * 0.6, a.face.mouthWidth * 0.6,
+    FACE_SHAPES.indexOf(a.face.shape) / 5,
+    BUILDS.indexOf(a.body.build) / 5,
+    a.hair.style.length / 10,
+    PRESENTATIONS.indexOf(a.presentation) / 2,
+    Math.min(a.age, 80) / 80,
+  ];
+}
+
+function appearanceDistance(a, b) {
+  const va = featureVector(a);
+  const vb = featureVector(b);
+  return Math.sqrt(va.reduce((s, x, i) => s + (x - vb[i]) ** 2, 0));
+}
+
+/**
+ * Representative preview of a population: draws from the real local
+ * distribution, then picks across tone quantiles (so the full local range,
+ * including both tails, is shown) while maximising pairwise distinctness.
+ */
+function representativeSample({ regionId, settlement = 'rural', count = 12, seed = 'preview', borderWith, oversample = 8 }) {
+  const candidates = Array.from({ length: count * oversample }, (_, i) =>
+    generateAppearance({ id: `${seed}:${regionId}:${settlement}:${i}`, regionId, settlement, borderWith }));
+  candidates.sort((a, b) => a.skin.tone - b.skin.tone);
+  const chosen = [];
+  for (let bin = 0; bin < count; bin++) {
+    const slice = candidates.slice(Math.floor((bin * candidates.length) / count), Math.floor(((bin + 1) * candidates.length) / count));
+    let best = slice[0];
+    let bestScore = -1;
+    for (const c of slice) {
+      const score = chosen.length ? Math.min(...chosen.map((o) => appearanceDistance(c, o))) : 1;
+      if (score > bestScore) [best, bestScore] = [c, score];
+    }
+    chosen.push(best);
+  }
+  return chosen;
+}
+
+return { APPEARANCE_VERSION, generateAppearance, featureVector, appearanceDistance, representativeSample };
+})();
+__m["src/appearance/lifecycle.js"] = (() => {
+// Appearance over time. The base record is immutable identity; age and events
+// produce a *visible* state. Skin tone, undertone, eye colour, hair texture and
+// bone structure never change through these functions.
+
+const { HAIR_COLORS, mixHex } = __m["src/appearance/traits.js"];
+
+const IMMUTABLE_KEYS = ['skin', 'eyes', 'face', 'ancestry', 'seed', 'id'];
+
+const EVENT_TYPES = {
+  scar: 'Visible scar',
+  haircut: 'New hairstyle',
+  'facial-hair': 'Facial hair change',
+  tattoo: 'Tattoo',
+  'eye-injury': 'Eye injury',
+  'weight-change': 'Weight change',
+  spectacles: 'Started wearing spectacles',
+};
+
+/** Record a meaningful event that changes appearance. Returns a new record. */
+function applyEvent(appearance, event) {
+  if (!EVENT_TYPES[event.type]) throw new Error(`Unknown appearance event: ${event.type}`);
+  for (const k of IMMUTABLE_KEYS) {
+    if (k in (event.changes ?? {})) throw new Error(`Event may not alter immutable trait '${k}'`);
+  }
+  return { ...appearance, events: [...appearance.events, { ...event, atAge: event.atAge ?? appearance.age }] };
+}
+
+/** Advance (or set) the character's age. Returns a new record. */
+function withAge(appearance, age) {
+  return { ...appearance, age };
+}
+
+/** Derived visual state at the record's current age, including all events so far. */
+function visibleAppearance(a) {
+  const yearsGrey = Math.max(0, a.age - a.aging.greyingOnset);
+  const grey = Math.min(1, yearsGrey / 35);
+  const baseHair = HAIR_COLORS[a.hair.color];
+  const hairHex = grey > 0 ? mixHex(baseHair, '#d9d6d0', grey * 0.8) : baseHair;
+  const wrinkles = Math.max(0, Math.min(1, ((a.age - 32) / 45) * a.aging.wrinkleRate));
+  const recession = a.age > 28 ? Math.min(1, a.aging.recession * ((a.age - 28) / 30)) : 0;
+
+  const v = {
+    hairHex,
+    hairStyle: a.hair.style,
+    facialHair: a.facialHair,
+    grey: Math.round(grey * 100) / 100,
+    wrinkles: Math.round(wrinkles * 100) / 100,
+    recession: Math.round(recession * 100) / 100,
+    scars: [],
+    tattoos: [],
+    eyeInjury: null,
+    spectacles: false,
+    buildShift: 0,
+  };
+  for (const e of a.events) {
+    if (e.atAge > a.age) continue;
+    if (e.type === 'haircut') v.hairStyle = e.style;
+    if (e.type === 'facial-hair') v.facialHair = e.style;
+    if (e.type === 'scar') v.scars.push({ side: e.side ?? 'left', location: e.location ?? 'cheek' });
+    if (e.type === 'tattoo') v.tattoos.push({ location: e.location ?? 'cheek', pattern: e.pattern ?? 'line' });
+    if (e.type === 'eye-injury') v.eyeInjury = { side: e.side ?? 'left', patch: e.patch ?? true };
+    if (e.type === 'weight-change') v.buildShift += e.delta ?? 1;
+    if (e.type === 'spectacles') v.spectacles = true;
+  }
+  return v;
+}
+
+return { EVENT_TYPES, applyEvent, withAge, visibleAppearance };
+})();
+__m["src/appearance/identity.js"] = (() => {
+// Persistent identity for image-model portraits. The descriptor is a pure
+// function of the stored appearance, so every scene prompt for a character
+// carries the same physical description; a reference image (once generated)
+// is pinned to the record and passed with every subsequent request.
+
+const { SKIN_TONE_CATEGORIES } = __m["src/appearance/traits.js"];
+const { visibleAppearance } = __m["src/appearance/lifecycle.js"];
+
+const txt = (s) => s.replace(/-/g, ' ');
+
+const level = (x, lo, mid, hi) => (x < 0.35 ? lo : x > 0.65 ? hi : mid);
+
+function describeAppearance(a) {
+  const v = visibleAppearance(a);
+  const tone = SKIN_TONE_CATEGORIES.find((c) => c.id === a.skin.category).label.toLowerCase();
+  const parts = [
+    `${a.age}-year-old ${a.presentation === 'androgynous' ? 'androgynous person' : a.presentation === 'feminine' ? 'woman' : 'man'}`,
+    `${tone} skin (tone ${a.skin.tone.toFixed(2)} on a 0–1 light-to-dark scale, ${txt(a.skin.undertone)} undertone, ${a.skin.hex})`,
+    `${a.face.shape} face, ${level(a.face.cheekbones, 'soft', 'moderate', 'high')} cheekbones, ${level(a.face.jaw, 'narrow', 'medium', 'broad')} jaw`,
+    `${level(a.face.noseWidth, 'narrow', 'medium-width', 'broad')} nose with a ${level(a.face.noseBridge, 'low', 'medium', 'high')} bridge`,
+    `${level(a.face.lipFullness, 'thin', 'medium', 'full')} lips`,
+    `${txt(a.eyes.color)} eyes, ${txt(a.eyes.lid)} eyelids`,
+    `${level(a.face.browThickness, 'fine', 'medium', 'thick')} brows`,
+    `${txt(a.hair.texture)} ${v.grey > 0.6 ? 'grey' : v.grey > 0.15 ? `greying ${txt(a.hair.color)}` : txt(a.hair.color)} hair worn ${txt(v.hairStyle)}`,
+  ];
+  if (v.facialHair !== 'none') parts.push(txt(v.facialHair));
+  if (a.marks.freckles) parts.push('freckles');
+  if (a.marks.vitiligo) parts.push('vitiligo patches');
+  if (a.marks.birthmark) parts.push('a birthmark on the face');
+  if (a.marks.dimples) parts.push('dimples');
+  if (v.wrinkles > 0.3) parts.push(v.wrinkles > 0.7 ? 'deep age lines' : 'light age lines');
+  for (const s of v.scars) parts.push(`a scar on the ${s.side} ${s.location}`);
+  for (const t of v.tattoos) parts.push(`a ${t.pattern} tattoo on the ${t.location}`);
+  if (v.eyeInjury) parts.push(v.eyeInjury.patch ? `an eyepatch over the ${v.eyeInjury.side} eye` : `a scarred ${v.eyeInjury.side} eye`);
+  if (v.spectacles) parts.push('spectacles');
+  parts.push(`${a.body.build} build, ${a.body.heightCm} cm`);
+  return parts.join('; ');
+}
+
+/** Identity record to persist alongside the character. */
+function identityRecord(a, referenceImage = null) {
+  return {
+    characterId: a.id,
+    appearanceVersion: a.version,
+    seed: a.seed,
+    descriptor: describeAppearance(a),
+    referenceImage,
+    // Guards against the most common image-model drift.
+    negative: 'do not lighten or darken skin, do not change facial structure, do not change hair texture, not a different person',
+  };
+}
+
+/** Build an image-model request for a scene; identity always travels with it. */
+function portraitRequest(identity, scene = 'head-and-shoulders portrait, neutral background') {
+  return {
+    prompt: `${scene}. The same individual as the reference: ${identity.descriptor}.`,
+    negativePrompt: identity.negative,
+    referenceImage: identity.referenceImage,
+    seed: identity.seed,
+  };
+}
+
+return { describeAppearance, identityRecord, portraitRequest };
+})();
+__m["src/appearance/family.js"] = (() => {
+// Households: children inherit from both parents with realistic sibling
+// variation — siblings are related, not clones, and mixed-heritage families
+// can show a wide range of appearances.
+
+const { Rng, clamp } = __m["src/appearance/rng.js"];
+const { generateAppearance } = __m["src/appearance/generator.js"];
+const { skinHex, skinToneCategory, HAIR_TEXTURES } = __m["src/appearance/traits.js"];
+
+function averageAncestry(a, b) {
+  const out = {};
+  for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) out[k] = ((a[k] ?? 0) + (b[k] ?? 0)) / 2;
+  return out;
+}
+
+function generateChild(parentA, parentB, { id, age, presentation }) {
+  const ancestry = averageAncestry(parentA.ancestry, parentB.ancestry);
+  const base = generateAppearance({ id, regionId: parentA.context.regionId, settlement: parentA.context.settlement, ancestry, age, presentation });
+  const rng = Rng.stream(id, 'inheritance');
+  const from = () => (rng.chance(0.5) ? parentA : parentB);
+
+  const spread = Math.abs(parentA.skin.tone - parentB.skin.tone);
+  const tone = clamp((parentA.skin.tone + parentB.skin.tone) / 2 + rng.normal(0, 0.035 + spread * 0.25), 0.01, 0.99);
+  const undertone = from().skin.undertone;
+
+  const ta = HAIR_TEXTURES.indexOf(parentA.hair.texture);
+  const tb = HAIR_TEXTURES.indexOf(parentB.hair.texture);
+  const texIdx = Math.round(clamp(rng.range(Math.min(ta, tb) - 0.4, Math.max(ta, tb) + 0.4), 0, 4));
+
+  const face = { ...base.face };
+  for (const k of ['noseWidth', 'noseBridge', 'lipFullness', 'cheekbones', 'jaw']) {
+    face[k] = Math.round(clamp((parentA.face[k] + parentB.face[k]) / 2 + rng.normal(0, 0.1)) * 100) / 100;
+  }
+  return {
+    ...base,
+    context: { ...base.context, origin: parentA.context.origin },
+    skin: { tone: Math.round(tone * 1000) / 1000, category: skinToneCategory(tone).id, undertone, hex: skinHex(tone, undertone) },
+    hair: { ...base.hair, texture: HAIR_TEXTURES[texIdx], color: rng.chance(0.8) ? from().hair.color : base.hair.color },
+    eyes: { ...base.eyes, color: rng.chance(0.8) ? from().eyes.color : base.eyes.color, lid: from().eyes.lid },
+    face,
+    parents: [parentA.id, parentB.id],
+  };
+}
+
+/**
+ * A household: two adults (possibly from different regions — intermarriage)
+ * and 1–4 children.
+ */
+function generateHousehold({ id, regionId, settlement = 'town', partnerRegionId }) {
+  const rng = Rng.stream(id, 'household');
+  const adultAge = rng.int(30, 50);
+  const a = generateAppearance({ id: `${id}:a`, regionId, settlement, age: adultAge, presentation: 'feminine' });
+  const b = generateAppearance({ id: `${id}:b`, regionId: partnerRegionId ?? regionId, settlement, age: adultAge + rng.int(-4, 6), presentation: 'masculine' });
+  const children = Array.from({ length: rng.int(1, 4) }, (_, i) =>
+    generateChild(a, b, { id: `${id}:c${i}`, age: Math.max(1, adultAge - 22 - i * rng.int(2, 4)) }));
+  return { id, members: [a, b, ...children] };
+}
+
+return { generateChild, generateHousehold };
+})();
+__m["src/society/roles.js"] = (() => {
+// Social role assignment. Kept strictly separate from appearance: it draws
+// from its own RNG stream and never receives an appearance record, so skin
+// tone, hair, or features cannot influence occupation, class, politics or
+// narrative role (and vice versa).
+
+const { Rng } = __m["src/appearance/rng.js"];
+
+const OCCUPATIONS = {
+  farmer: 'Farmer', herder: 'Herder', fisher: 'Fisher', laborer: 'Labourer', artisan: 'Artisan',
+  weaver: 'Weaver', smith: 'Smith', merchant: 'Merchant', shopkeeper: 'Shopkeeper', sailor: 'Sailor',
+  soldier: 'Soldier', officer: 'Officer', scholar: 'Scholar', physician: 'Physician', engineer: 'Engineer',
+  scribe: 'Scribe', priest: 'Priest', magistrate: 'Magistrate', minister: 'Minister', governor: 'Governor',
+  'head-of-state': 'Head of state', artist: 'Artist', teacher: 'Teacher', banker: 'Banker',
+};
+
+const ROLE_GROUPS = {
+  leaders: ['head-of-state', 'minister', 'governor', 'magistrate'],
+  officials: ['scribe', 'magistrate', 'officer'],
+  workers: ['farmer', 'herder', 'fisher', 'laborer', 'artisan', 'weaver', 'smith', 'sailor'],
+  merchants: ['merchant', 'shopkeeper', 'banker'],
+  soldiers: ['soldier', 'officer'],
+  scholars: ['scholar', 'physician', 'engineer', 'teacher', 'priest'],
+};
+
+const SETTLEMENT_WEIGHTS = {
+  rural: { farmer: 8, herder: 4, laborer: 3, artisan: 2, weaver: 2, smith: 1, priest: 0.6, teacher: 0.5, soldier: 1, shopkeeper: 1 },
+  town: { artisan: 3, shopkeeper: 3, merchant: 2, smith: 1.5, weaver: 1.5, laborer: 3, farmer: 2, scribe: 1, teacher: 1, physician: 0.6, priest: 0.8, soldier: 1.2, magistrate: 0.2 },
+  urban: { laborer: 4, artisan: 3, shopkeeper: 2.5, merchant: 2, scribe: 1.5, scholar: 1, physician: 0.8, engineer: 0.8, teacher: 1.2, artist: 0.8, soldier: 1.5, officer: 0.4, banker: 0.4, magistrate: 0.3, minister: 0.08, governor: 0.03, 'head-of-state': 0.005 },
+  port: { sailor: 5, fisher: 3, laborer: 4, merchant: 3, shopkeeper: 2, artisan: 2, banker: 0.6, scribe: 1, soldier: 1, officer: 0.3, engineer: 0.5, physician: 0.4, magistrate: 0.2 },
+  border: { farmer: 4, herder: 3, soldier: 3, officer: 0.6, merchant: 1.5, laborer: 2, smith: 1, scribe: 0.6, priest: 0.5, magistrate: 0.2 },
+};
+
+/**
+ * @param {{ seed: string, settlement?: string }} input — note: no appearance input exists.
+ */
+function assignRole({ seed, settlement = 'rural' }) {
+  const rng = Rng.stream(seed, 'social-role');
+  const occupation = rng.weighted(SETTLEMENT_WEIGHTS[settlement] ?? SETTLEMENT_WEIGHTS.rural);
+  return { occupation, label: OCCUPATIONS[occupation] };
+}
+
+/** Pick a specific role from a group (e.g. for an officials panel) — still appearance-blind. */
+function assignRoleFromGroup({ seed, group }) {
+  const rng = Rng.stream(seed, 'social-role-group');
+  const occupation = rng.pick(ROLE_GROUPS[group]);
+  return { occupation, label: OCCUPATIONS[occupation] };
+}
+
+return { OCCUPATIONS, ROLE_GROUPS, assignRole, assignRoleFromGroup };
+})();
+__m["src/society/names.js"] = (() => {
+// Placeholder personal names (syllabic, culture-neutral) until Iskar's naming
+// conventions are wired in. Drawn from their own RNG stream — independent of
+// appearance and role.
+
+const { Rng } = __m["src/appearance/rng.js"];
+
+const ONSETS = ['', 'b', 'd', 'f', 'g', 'h', 'k', 'l', 'm', 'n', 'r', 's', 't', 'v', 'z', 'sh', 'th', 'kh', 'y', 'w'];
+const VOWELS = ['a', 'e', 'i', 'o', 'u', 'ai', 'ei', 'ou', 'aa', 'ia'];
+const CODAS = ['', '', '', 'n', 'r', 'l', 's', 'm', 'k', 'th'];
+
+function word(rng, syllables) {
+  let w = '';
+  for (let i = 0; i < syllables; i++) w += rng.pick(ONSETS) + rng.pick(VOWELS) + (i === syllables - 1 ? rng.pick(CODAS) : '');
+  return w.charAt(0).toUpperCase() + w.slice(1);
+}
+
+function personName(seed) {
+  const rng = Rng.stream(seed, 'name');
+  return `${word(rng, rng.int(2, 3))} ${word(rng, rng.int(2, 3))}`;
+}
+
+return { personName };
+})();
+__m["src/portrait/svg.js"] = (() => {
+// Procedural SVG portraits rendered from the structured appearance record.
+//
+// Deterministic: the same record (same age, same events) always produces the
+// same picture, so a character stays recognisable across screens and scenes.
+// Lighting comes from the upper left. Every shadow, highlight, lip and line
+// colour is derived from the person's own skin colour, so form and features
+// read clearly across the whole light-to-dark range.
+
+const { Rng, clamp, hashString } = __m["src/appearance/rng.js"];
+const { EYE_COLORS, HAIR_COLORS, mixHex, shadeHex, relativeLuminance } = __m["src/appearance/traits.js"];
+const { visibleAppearance } = __m["src/appearance/lifecycle.js"];
+
+const f = (n) => Math.round(n * 10) / 10;
+
+// ---------------------------------------------------------------------------
+// Geometry helpers
+
+function smoothClosed(pts, tension = 1) {
+  const n = pts.length;
+  let d = `M${f(pts[0][0])},${f(pts[0][1])}`;
+  for (let i = 0; i < n; i++) {
+    const p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i + 1) % n], p3 = pts[(i + 2) % n];
+    const c1 = [p1[0] + ((p2[0] - p0[0]) / 6) * tension, p1[1] + ((p2[1] - p0[1]) / 6) * tension];
+    const c2 = [p2[0] - ((p3[0] - p1[0]) / 6) * tension, p2[1] - ((p3[1] - p1[1]) / 6) * tension];
+    d += ` C${f(c1[0])},${f(c1[1])} ${f(c2[0])},${f(c2[1])} ${f(p2[0])},${f(p2[1])}`;
+  }
+  return d + 'Z';
+}
+
+function resample(pts, step) {
+  const out = [];
+  for (let i = 0; i < pts.length; i++) {
+    const [x0, y0] = pts[i];
+    const [x1, y1] = pts[(i + 1) % pts.length];
+    const k = Math.max(1, Math.round(Math.hypot(x1 - x0, y1 - y0) / step));
+    for (let j = 0; j < k; j++) out.push([x0 + ((x1 - x0) * j) / k, y0 + ((y1 - y0) * j) / k]);
+  }
+  return out;
+}
+
+function arc(cx, cy, rx, ry, a0, a1, n = 14) {
+  return Array.from({ length: n + 1 }, (_, i) => {
+    const a = a0 + ((a1 - a0) * i) / n;
+    return [cx + rx * Math.cos(a), cy + ry * Math.sin(a)];
+  });
+}
+
+function pointInPoly([x, y], pts) {
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const [xi, yi] = pts[i], [xj, yj] = pts[j];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+function bounds(pts) {
+  const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
+  return { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
+}
+
+// ---------------------------------------------------------------------------
+// Colour
+
+/** Feature colours derived from the individual's own skin colour. */
+function featurePalette(skin) {
+  const lum = relativeLuminance(skin);
+  // Lips shift continuously from rose-brown on lighter skin to mauve-brown on
+  // deeper skin, so they stay distinct at every tone.
+  const k = clamp((lum - 0.03) / 0.5);
+  const lip = mixHex(shadeHex(skin, 0.7 + 0.3 * k), mixHex('#8e4f5c', '#b25a55', k), 0.55);
+  return {
+    shadow: shadeHex(skin, 0.62),
+    deep: shadeHex(skin, 0.42),
+    line: mixHex(shadeHex(skin, 0.3), '#0d0907', 0.6),
+    lip,
+    lipUpper: shadeHex(lip, 0.82),
+    // Deeper skin gets a stronger, cooler sheen, as it does under real light.
+    highlight: lum < 0.08 ? mixHex(shadeHex(skin, 1.7), '#c9b3a8', 0.25) : shadeHex(skin, 1.22),
+    lit: shadeHex(skin, lum < 0.08 ? 1.3 : 1.1),
+    shade: shadeHex(skin, 0.74),
+    blush: mixHex(skin, lum > 0.3 ? '#d4625c' : '#9c3c3c', 0.5),
+    blushOpacity: lum > 0.3 ? 0.2 : 0.14,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Face geometry
+
+function geometry(a, v) {
+  const child = a.age < 14;
+  const cx = 100;
+  const cy = 112;
+  const shapeMods = {
+    oval: [0, 0.9, 0.74, 0],
+    round: [2, 1, 0.88, -4],
+    square: [1, 0.95, 0.95, -1],
+    heart: [1, 1, 0.64, 0],
+    long: [-3, 0.9, 0.78, 6],
+    diamond: [-1, 0.86, 0.68, 2],
+  }[a.face.shape];
+  const W = 33 + a.face.cheekbones * 4 + a.face.width * 7 + shapeMods[0] + (child ? 2 : 0);
+  const H = 46 + a.face.length * 8 + shapeMods[3] - (child ? 4 : 0);
+  const temple = W * shapeMods[1];
+  const jawW = W * (shapeMods[2] + (a.face.jaw - 0.5) * 0.25);
+  const outline = [
+    [cx, cy - H],
+    [cx + temple * 0.75, cy - H * 0.82],
+    [cx + temple, cy - H * 0.4],
+    [cx + W, cy + 2],
+    [cx + jawW, cy + H * 0.62],
+    [cx + jawW * 0.55, cy + H * 0.9],
+    [cx + jawW * 0.22, cy + H * 0.995],
+    [cx - jawW * 0.22, cy + H * 0.995],
+    [cx - jawW * 0.55, cy + H * 0.9],
+    [cx - jawW, cy + H * 0.62],
+    [cx - W, cy + 2],
+    [cx - temple, cy - H * 0.4],
+    [cx - temple * 0.75, cy - H * 0.82],
+  ];
+  const hairlineY = cy - H * 0.58 + v.recession * 16;
+  const ey = cy - 7 + a.face.featureHeight * 5;
+  const ny = cy + 13 + a.face.noseLength * 8;
+  const my = Math.min(ny + 11 + a.face.length * 3, cy + H * 0.72);
+  return { cx, cy, W, H, outline, hairlineY, child, ey, ny, my, jawW };
+}
+
+// ---------------------------------------------------------------------------
+// Rendering context: unique ids + shared defs per portrait
+
+class Ctx {
+  constructor(uid) {
+    this.uid = uid;
+    this.n = 0;
+    this.defs = [];
+    this.blurs = {};
+  }
+  id(prefix = 'i') {
+    return `${this.uid}${prefix}${(this.n++).toString(36)}`;
+  }
+  linear(stops, { x1 = 0, y1 = 0, x2 = 0, y2 = 1 } = {}) {
+    const id = this.id('g');
+    this.defs.push(`<linearGradient id="${id}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}">${stopsSvg(stops)}</linearGradient>`);
+    return `url(#${id})`;
+  }
+  radial(stops, { cx = 0.5, cy = 0.5, r = 0.5 } = {}) {
+    const id = this.id('r');
+    this.defs.push(`<radialGradient id="${id}" cx="${cx}" cy="${cy}" r="${r}">${stopsSvg(stops)}</radialGradient>`);
+    return `url(#${id})`;
+  }
+  clip(d) {
+    const id = this.id('c');
+    this.defs.push(`<clipPath id="${id}"><path d="${d}"/></clipPath>`);
+    return `url(#${id})`;
+  }
+  blur(sd) {
+    if (!this.blurs[sd]) {
+      const id = this.id('b');
+      this.defs.push(`<filter id="${id}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="${sd}"/></filter>`);
+      this.blurs[sd] = `url(#${id})`;
+    }
+    return this.blurs[sd];
+  }
+}
+
+function stopsSvg(stops) {
+  return stops.map(([o, c, op = 1]) => `<stop offset="${o}" stop-color="${c}"${op < 1 ? ` stop-opacity="${op}"` : ''}/>`).join('');
+}
+
+// ---------------------------------------------------------------------------
+// Hair
+
+const CURL = { straight: 0, wavy: 0, curly: 5.2, coily: 3.4, 'tightly-coiled': 2.4 };
+
+function hairPalette(color) {
+  const lum = relativeLuminance(color);
+  return {
+    base: color,
+    dark: shadeHex(color, 0.55),
+    deep: shadeHex(color, 0.35),
+    // Very dark hair gets a cool sheen; lighter hair a warm one.
+    sheen: lum < 0.02 ? mixHex(shadeHex(color, 3.2), '#8c8a96', 0.35) : shadeHex(color, 1.75),
+    light: shadeHex(color, lum < 0.02 ? 2.2 : 1.35),
+  };
+}
+
+/** A mass of hair filling an outline, rendered by texture. */
+function hairMass(ctx, pts, texture, color, rng, { opacity = 1, detail = 1 } = {}) {
+  const pal = hairPalette(color);
+  const d = smoothClosed(pts);
+  const b = bounds(pts);
+  const fill = ctx.linear([[0, pal.light], [0.45, pal.base], [1, pal.dark]], { x1: 0, y1: 0, x2: 0.35, y2: 1 });
+  if (opacity < 1) return `<path d="${d}" fill="${fill}" opacity="${opacity}"/>`;
+  const clip = ctx.clip(d);
+  const r = CURL[texture];
+  let s = '';
+
+  if (r) {
+    // Soft, irregular silhouette: curls and coils break the outline.
+    const edge = resample(pts, r * (texture === 'tightly-coiled' ? 0.9 : 1.15));
+    s += '<g>';
+    for (const [x, y] of edge) {
+      const rr = r * rng.range(0.8, 1.2);
+      s += `<circle cx="${f(x + rng.range(-1.2, 1.2))}" cy="${f(y + rng.range(-1.2, 1.2))}" r="${f(rr)}" fill="${y < (b.y0 + b.y1) / 2 ? pal.base : pal.dark}"/>`;
+    }
+    if (texture !== 'curly') {
+      for (const [x, y] of resample(pts, r * 1.6)) s += `<circle cx="${f(x + rng.range(-2, 2))}" cy="${f(y + rng.range(-2, 2))}" r="${f(r * 0.9)}" fill="${pal.base}" opacity="0.45"/>`;
+    }
+    s += `</g><path d="${d}" fill="${fill}"/>`;
+    // Interior texture: open spirals, lit on the upper-left.
+    const area = (b.x1 - b.x0) * (b.y1 - b.y0);
+    const count = Math.round((area / (r * r * 3.2)) * detail);
+    s += `<g clip-path="${clip}" fill="none" stroke-linecap="round">`;
+    for (let i = 0; i < count; i++) {
+      const x = rng.range(b.x0, b.x1), y = rng.range(b.y0, b.y1);
+      if (!pointInPoly([x, y], pts)) continue;
+      const rr = r * rng.range(0.55, 0.95);
+      const lit = (y - b.y0) / (b.y1 - b.y0) < 0.45 && x < (b.x0 + b.x1) / 2 + 10;
+      const a0 = rng.range(0, Math.PI * 2);
+      const p0 = [x + rr * Math.cos(a0), y + rr * Math.sin(a0)];
+      const sweep = rng.range(1.4, 2.8);
+      const p1 = [x + rr * Math.cos(a0 + sweep), y + rr * Math.sin(a0 + sweep)];
+      s += `<path d="M${f(p0[0])},${f(p0[1])} A${f(rr)},${f(rr)} 0 0 1 ${f(p1[0])},${f(p1[1])}" stroke="${lit && rng.chance(0.55) ? pal.sheen : pal.deep}" stroke-width="${texture === 'curly' ? 0.9 : 0.65}" opacity="${lit ? 0.7 : 0.55}"/>`;
+    }
+    s += '</g>';
+  } else {
+    s += `<path d="${d}" fill="${fill}"/>`;
+    // Strands flow from the crown out to the edge of the mass.
+    const crown = [b.x0 + (b.x1 - b.x0) * 0.45, b.y0 + 2];
+    const amp = texture === 'wavy' ? 3.2 : 0.6;
+    s += `<g clip-path="${clip}" fill="none" stroke-linecap="round">`;
+    const ends = resample(pts, Math.max(2.2, 3.4 / detail));
+    ends.forEach(([ex, ey], i) => {
+      if (ey < crown[1] + 4) return;
+      const mx = (crown[0] + ex) / 2, my = (crown[1] + ey) / 2;
+      const nx = -(ey - crown[1]), ny = ex - crown[0];
+      const len = Math.hypot(nx, ny) || 1;
+      const bend = (texture === 'wavy' ? Math.sin(i * 1.7) * amp : amp) * 2;
+      const c1 = [mx + (nx / len) * bend, my + (ny / len) * bend - 6];
+      const dark = i % 3 !== 0;
+      s += `<path d="M${f(crown[0] + rng.range(-3, 3))},${f(crown[1])} Q${f(c1[0])},${f(c1[1])} ${f(ex)},${f(ey + 2)}" stroke="${dark ? pal.dark : pal.light}" stroke-width="${f(rng.range(0.5, 1.2))}" opacity="${dark ? 0.5 : 0.4}"/>`;
+    });
+    s += '</g>';
+  }
+  // Sheen: a soft band of reflected light across the crown.
+  const sx = b.x0 + (b.x1 - b.x0) * 0.38, sy = b.y0 + Math.min(18, (b.y1 - b.y0) * 0.22);
+  s += `<g clip-path="${clip}"><ellipse cx="${f(sx)}" cy="${f(sy)}" rx="${f((b.x1 - b.x0) * 0.32)}" ry="${r ? 7 : 5}" fill="${pal.sheen}" opacity="${r ? 0.22 : 0.32}" filter="${ctx.blur(3)}" transform="rotate(-12 ${f(sx)} ${f(sy)})"/></g>`;
+  return s;
+}
+
+function hairSvg(ctx, a, v, g, color, rng, detail) {
+  const { cx, cy, W, H, hairlineY } = g;
+  const tex = a.hair.texture;
+  const style = v.hairStyle;
+  const curl = CURL[tex];
+  const vol = { straight: 4, wavy: 6, curly: 9, coily: 11, 'tightly-coiled': 12 }[tex];
+  const back = [];
+  const front = [];
+  const pal = hairPalette(color);
+
+  const cap = (extra, sideDrop = 8) => {
+    const outer = arc(cx, cy - 6, W + extra, H + extra - 2, Math.PI * 1.04, Math.PI * 1.96, 16);
+    const hairline = [
+      [cx + W - 2, cy - 6],
+      [cx + W * 0.72, hairlineY + 7],
+      [cx + W * 0.3, hairlineY + 1],
+      [cx, hairlineY - 1],
+      [cx - W * 0.3, hairlineY + 1],
+      [cx - W * 0.72, hairlineY + 7],
+      [cx - W + 2, cy - 6],
+    ];
+    return [[cx - W - extra * 0.5, cy + sideDrop], ...outer, [cx + W + extra * 0.5, cy + sideDrop], ...hairline];
+  };
+  const mass = (pts, opts) => hairMass(ctx, pts, tex, color, rng, { detail, ...opts });
+
+  if (style === 'headwrap') {
+    const hue = (a.clothingHue + 140) % 360;
+    const c1 = `hsl(${hue} 48% 44%)`, c2 = `hsl(${hue} 50% 30%)`, c3 = `hsl(${hue} 45% 58%)`;
+    const fill = ctx.linear([[0, c3], [0.5, c1], [1, c2]], { x1: 0, y1: 0, x2: 1, y2: 1 });
+    const pts = [[cx - W - 5, cy - 8], ...arc(cx, cy - 18, W + 11, H + 6, Math.PI * 1.05, Math.PI * 1.95, 14), [cx + W + 5, cy - 8], [cx + W * 0.45, cy - H * 0.52], [cx, cy - H * 0.6], [cx - W * 0.45, cy - H * 0.52]];
+    const top = arc(cx + 6, cy - H - 9, 28, 17, Math.PI, Math.PI * 2, 12);
+    front.push(`<path d="${smoothClosed([...top, [cx + 28, cy - H + 6], [cx - 18, cy - H + 4]])}" fill="${fill}"/>`);
+    front.push(`<path d="${smoothClosed(pts)}" fill="${fill}"/>`);
+    front.push(`<g stroke="${c2}" stroke-width="1.3" fill="none" opacity="0.7" stroke-linecap="round"><path d="M${f(cx - W)},${f(cy - 28)} Q${cx},${f(cy - H - 12)} ${f(cx + W + 2)},${f(cy - 46)}"/><path d="M${f(cx - W + 6)},${f(cy - 16)} Q${cx - 4},${f(cy - H)} ${f(cx + W - 2)},${f(cy - 30)}"/><path d="M${cx - 12},${f(cy - H - 18)} q14,8 30,4"/></g>`);
+    front.push(`<g stroke="${c3}" stroke-width="1" fill="none" opacity="0.6"><path d="M${f(cx - W + 2)},${f(cy - 34)} Q${cx - 6},${f(cy - H - 6)} ${f(cx + W - 8)},${f(cy - 50)}"/></g>`);
+    return { back: '', front: front.join(''), shadowLine: cy - H * 0.55 };
+  }
+  if (style === 'shaved') {
+    front.push(mass(cap(1, -4), { opacity: 0.32 }));
+    return { back: '', front: front.join(''), shadowLine: null };
+  }
+  if (style === 'afro') {
+    const r = W + 18 + vol;
+    back.push(mass(arc(cx, cy - 20, r, r * 0.92, Math.PI * 0.84, Math.PI * 2.16, 28)));
+    front.push(mass(cap(3, 4)));
+    return { back: back.join(''), front: front.join(''), shadowLine: hairlineY };
+  }
+  const longLen = { shoulder: cy + 46, long: 224, braids: 214, locs: 210, twists: cy + 40 }[style];
+  if (style === 'shoulder' || style === 'long') {
+    const pts = [...arc(cx, cy - 8, W + vol + 4, H + vol, Math.PI, Math.PI * 2, 16), [cx + W + vol + 9, longLen - 10], [cx + W * 0.7, longLen], [cx - W * 0.7, longLen], [cx - W - vol - 9, longLen - 10]];
+    back.push(mass(pts));
+    back.push(`<ellipse cx="${cx}" cy="${cy + 20}" rx="${f(W * 0.95)}" ry="${f(H * 0.9)}" fill="${pal.deep}" opacity="0.55" filter="${ctx.blur(4)}"/>`);
+  }
+  if (style === 'braids' || style === 'locs' || style === 'twists') {
+    const strands = style === 'braids' ? 8 : style === 'locs' ? 11 : 13;
+    const sw = style === 'braids' ? 6.2 : style === 'locs' ? 5.6 : 4.6;
+    let g2 = '<g stroke-linecap="round" fill="none">';
+    const draw = (dd, w) => {
+      g2 += `<path d="${dd}" stroke="${pal.dark}" stroke-width="${f(w + 1)}"/>`;
+      g2 += `<path d="${dd}" stroke="${pal.base}" stroke-width="${f(w)}"/>`;
+      if (style === 'locs') g2 += `<path d="${dd}" stroke="${pal.light}" stroke-width="${f(w * 0.25)}" opacity="0.5" transform="translate(-1 0)"/>`;
+      else g2 += `<path d="${dd}" stroke="${pal.deep}" stroke-width="${f(w * 0.8)}" stroke-dasharray="1.6 2.6" opacity="0.8"/><path d="${dd}" stroke="${pal.sheen}" stroke-width="${f(w * 0.35)}" stroke-dasharray="1 3.2" opacity="0.55" transform="translate(-0.8 -0.6)"/>`;
+    };
+    for (let i = 0; i < 5; i++) {
+      const x0 = cx - W * 0.5 + i * W * 0.25;
+      draw(`M${f(x0)},${f(cy - 30)} Q${f(x0 + rng.range(-6, 6))},${f(cy + 30)} ${f(x0 + rng.range(-4, 4))},${f(longLen - 6)}`, sw);
+    }
+    for (let i = 0; i < strands; i++) {
+      const t = i / (strands - 1);
+      const x0 = cx - W - 4 + t * (2 * W + 8);
+      const side = x0 < cx ? -1 : 1;
+      if (Math.abs(x0 - cx) < W * 0.55) continue;
+      const xEnd = x0 + side * rng.range(4, 12);
+      const yEnd = longLen - rng.range(0, 14);
+      draw(`M${f(x0)},${f(cy - 20)} Q${f(x0 + side * 8)},${f((cy + yEnd) / 2)} ${f(xEnd)},${f(yEnd)}`, sw);
+    }
+    back.push(g2 + '</g>');
+    front.push(mass(cap(style === 'locs' ? 6 : 3, 2)));
+    if (style === 'braids') {
+      let rows = '<g fill="none" stroke-linecap="round">';
+      for (let i = -3; i <= 3; i++) {
+        const dd = `M${f(cx + i * 6)},${f(hairlineY + 1)} Q${f(cx + i * 9)},${f(cy - H - 4)} ${f(cx + i * 12)},${f(cy - H - 2)}`;
+        rows += `<path d="${dd}" stroke="${pal.deep}" stroke-width="1.1" opacity="0.85"/><path d="${dd}" stroke="${pal.sheen}" stroke-width="0.5" opacity="0.5" transform="translate(2.4 0)"/>`;
+      }
+      front.push(rows + '</g>');
+    }
+    return { back: back.join(''), front: front.join(''), shadowLine: hairlineY };
+  }
+  const capExtra = { 'close-crop': 2 + curl * 0.3, short: vol, shoulder: vol, long: vol, bun: Math.min(vol, 6), topknot: Math.min(vol, 5) }[style] ?? vol;
+  if (style === 'bun') back.push(mass(arc(cx, cy - H - 10, 18, 15, 0, Math.PI * 2, 16).slice(0, -1)));
+  front.push(mass(cap(capExtra, style === 'close-crop' ? -2 : 8)));
+  if (style === 'shoulder' || style === 'long') {
+    for (const side of [-1, 1]) {
+      const pts = [[cx + side * (W - 6), cy - 18], [cx + side * (W + vol + 6), cy - 14], [cx + side * (W + vol + 4), longLen - 14], [cx + side * (W - 2), longLen - 20], [cx + side * (W + 1), cy + 10]];
+      front.push(mass(pts));
+    }
+  }
+  if (style === 'topknot') front.push(mass(arc(cx, cy - H - 8, 11, 9, 0, Math.PI * 2, 14).slice(0, -1)));
+  return { back: back.join(''), front: front.join(''), shadowLine: style === 'close-crop' ? null : hairlineY };
+}
+
+// ---------------------------------------------------------------------------
+// Face
+
+function faceModelling(ctx, a, g, P, faceClip) {
+  const { cx, cy, W, H, ey, ny, my } = g;
+  const deepSet = a.eyes.lid === 'deep-set' ? 0.18 : 0;
+  const blur = ctx.blur(3.2);
+  const soft = ctx.blur(1.6);
+  const dx = 13 + a.eyes.spacing * 6;
+  let s = `<g clip-path="${faceClip}">`;
+  // Form shadow on the far (right) side and under the jaw.
+  s += `<ellipse cx="${f(cx + W * 1.02)}" cy="${f(cy + 6)}" rx="${f(W * 0.5)}" ry="${f(H * 1.1)}" fill="${P.shade}" opacity="0.7" filter="${blur}"/>`;
+  s += `<ellipse cx="${cx}" cy="${f(cy + H * 1.05)}" rx="${f(W * 0.9)}" ry="${f(H * 0.28)}" fill="${P.shade}" opacity="0.55" filter="${blur}"/>`;
+  s += `<ellipse cx="${f(cx - W * 1.05)}" cy="${f(cy + 2)}" rx="${f(W * 0.22)}" ry="${f(H * 0.9)}" fill="${P.shade}" opacity="0.35" filter="${blur}"/>`;
+  // Eye sockets.
+  for (const side of [-1, 1]) {
+    s += `<ellipse cx="${f(cx + side * dx)}" cy="${f(ey - 3)}" rx="${f(11 + a.eyes.size * 3)}" ry="${f(7 + deepSet * 10)}" fill="${P.shade}" opacity="${f(0.32 + deepSet + (side > 0 ? 0.1 : 0))}" filter="${soft}"/>`;
+  }
+  // Nose: shadow side, bridge highlight, tip.
+  const nw = 6 + a.face.noseWidth * 7;
+  s += `<path d="M${f(cx + 3)},${f(ey + 1)} Q${f(cx + 6 + a.face.noseBridge * 2)},${f((ey + ny) / 2)} ${f(cx + nw * 0.9)},${f(ny + 1)} L${f(cx + 2)},${f(ny + 2)}Z" fill="${P.shade}" opacity="0.7" filter="${soft}"/>`;
+  s += `<path d="M${f(cx - 1.5)},${f(ey + 2)} Q${f(cx - 2.5)},${f((ey + ny) / 2)} ${f(cx - 1)},${f(ny - 1)}" stroke="${P.highlight}" stroke-width="${f(1.6 + a.face.noseBridge * 1.6)}" fill="none" opacity="0.55" stroke-linecap="round" filter="${soft}"/>`;
+  s += `<ellipse cx="${f(cx - 1)}" cy="${f(ny + 0.5)}" rx="3" ry="2.2" fill="${P.highlight}" opacity="0.55" filter="${soft}"/>`;
+  // Cheekbones: lit side highlight, contour beneath, a little colour.
+  s += `<ellipse cx="${f(cx - W * 0.55)}" cy="${f(ey + 13)}" rx="${f(9 + a.face.cheekbones * 4)}" ry="6" fill="${P.highlight}" opacity="${f(0.22 + a.face.cheekbones * 0.18)}" filter="${blur}"/>`;
+  s += `<ellipse cx="${f(cx + W * 0.55)}" cy="${f(ey + 13)}" rx="${f(8 + a.face.cheekbones * 3)}" ry="5" fill="${P.highlight}" opacity="0.12" filter="${blur}"/>`;
+  for (const side of [-1, 1]) {
+    const kx = cx + side * (W - 7);
+    s += `<ellipse cx="${f(kx)}" cy="${f(ey + 24)}" rx="6" ry="12" fill="${P.shade}" opacity="${f(0.15 + a.face.cheekbones * 0.3)}" filter="${blur}" transform="rotate(${side * -14} ${f(kx)} ${f(ey + 24)})"/>`;
+    s += `<ellipse cx="${f(cx + side * W * 0.52)}" cy="${f(ny + 4)}" rx="9" ry="6" fill="${P.blush}" opacity="${P.blushOpacity}" filter="${blur}"/>`;
+  }
+  // Forehead and chin light.
+  s += `<ellipse cx="${cx - 8}" cy="${f(cy - H * 0.55)}" rx="${f(W * 0.5)}" ry="${f(H * 0.2)}" fill="${P.highlight}" opacity="0.32" filter="${blur}"/>`;
+  s += `<ellipse cx="${cx - 2}" cy="${f(my + (cy + H - my) * 0.55)}" rx="7" ry="4" fill="${P.highlight}" opacity="0.3" filter="${soft}"/>`;
+  // Under-lip and philtrum shadows.
+  s += `<ellipse cx="${cx + 1}" cy="${f(my + 8 + a.face.lipFullness * 3)}" rx="7" ry="2.4" fill="${P.shade}" opacity="0.55" filter="${soft}"/>`;
+  s += `<path d="M${cx - 2},${f(ny + 5)} L${cx - 2.6},${f(my - 3)} M${cx + 2},${f(ny + 5)} L${cx + 2.6},${f(my - 3)}" stroke="${P.shade}" stroke-width="1.2" opacity="0.4" filter="${soft}"/>`;
+  return s + '</g>';
+}
+
+function eyesSvg(ctx, a, v, g, P, rng) {
+  const { cx, ey } = g;
+  const dx = 13 + a.eyes.spacing * 6;
+  const ew = 9 + a.eyes.size * 4;
+  const eh = (a.eyes.lid === 'monolid' ? 3.2 : 3.8) + a.eyes.size * 2.2;
+  const tilt = a.eyes.tilt * 6;
+  const irisBase = EYE_COLORS[a.eyes.color];
+  const iris = ctx.radial([[0, mixHex(irisBase, '#e8c27a', 0.28)], [0.55, irisBase], [0.88, shadeHex(irisBase, 0.55)], [1, '#14100e']]);
+  const sclera = ctx.linear([[0, mixHex('#efe9e1', P.shade, 0.35)], [0.45, '#f1ece5'], [1, '#e6dfd6']]);
+  const lash = P.line;
+  let s = '';
+  for (const side of [-1, 1]) {
+    const x = cx + side * dx;
+    const rot = `rotate(${f(-side * tilt)} ${f(x)} ${f(ey)})`;
+    const injured = v.eyeInjury && ((v.eyeInjury.side === 'left') === (side === -1));
+    s += `<g transform="${rot}">`;
+    if (injured && v.eyeInjury.patch) {
+      s += `<ellipse cx="${f(x)}" cy="${f(ey)}" rx="${f(ew + 2.5)}" ry="${f(eh + 4.5)}" fill="#1d1a18"/><ellipse cx="${f(x - 3)}" cy="${f(ey - 3)}" rx="4" ry="2" fill="#4a4440" opacity="0.6"/>`;
+      s += `<line x1="${f(x - ew - 2)}" y1="${f(ey - 2)}" x2="${f(cx - side * 52)}" y2="${f(ey - 26)}" stroke="#1d1a18" stroke-width="1.6"/><line x1="${f(x + ew + 2)}" y1="${f(ey - 2)}" x2="${f(cx + side * 52)}" y2="${f(ey - 10)}" stroke="#1d1a18" stroke-width="1.6"/>`;
+      s += '</g>';
+      continue;
+    }
+    const top = ey - eh * 2;
+    const eyePath = `M${f(x - ew)},${f(ey)} Q${f(x - ew * 0.2)},${f(top)} ${f(x + ew)},${f(ey - 0.5)} Q${f(x + ew * 0.1)},${f(ey + eh * 1.45)} ${f(x - ew)},${f(ey)}Z`;
+    const clip = ctx.clip(eyePath);
+    s += `<path d="${eyePath}" fill="${sclera}"/>`;
+    const ir = eh * 1.2;
+    const iy = ey - eh * 0.28;
+    s += `<g clip-path="${clip}">`;
+    s += `<circle cx="${f(x)}" cy="${f(iy)}" r="${f(ir)}" fill="${iris}"/>`;
+    s += `<circle cx="${f(x)}" cy="${f(iy)}" r="${f(ir * 0.42)}" fill="#0b0908"/>`;
+    s += `<path d="M${f(x - ew)},${f(ey)} Q${f(x - ew * 0.2)},${f(top)} ${f(x + ew)},${f(ey - 0.5)} L${f(x + ew)},${f(top)} L${f(x - ew)},${f(top)}Z" fill="${P.shade}" opacity="0.45" transform="translate(0 ${f(eh * 0.55)})" filter="${ctx.blur(0.8)}"/>`;
+    s += `<circle cx="${f(x + ir * 0.35)}" cy="${f(iy - ir * 0.38)}" r="${f(ir * 0.22)}" fill="#fff" opacity="0.92"/><circle cx="${f(x - ir * 0.3)}" cy="${f(iy + ir * 0.32)}" r="${f(ir * 0.1)}" fill="#fff" opacity="0.5"/>`;
+    s += '</g>';
+    if (injured) s += `<path d="M${f(x - 3)},${f(ey - eh * 2.4)} L${f(x + 4)},${f(ey + eh * 2)}" stroke="${mixHex(P.highlight, '#c99a9a', 0.5)}" stroke-width="1.5" stroke-linecap="round"/>`;
+    // Upper lid fold and crease by lid type.
+    const lid = a.eyes.lid;
+    const lidH = lid === 'monolid' ? eh * 1.25 : lid === 'hooded' ? eh * 1.05 : eh * 0.75;
+    s += `<path d="M${f(x - ew - 1)},${f(ey + 0.3)} Q${f(x - ew * 0.2)},${f(top - 0.5)} ${f(x + ew + 1)},${f(ey - 0.3)} Q${f(x)},${f(top - lidH)} ${f(x - ew - 1)},${f(ey + 0.3)}Z" fill="${P.lit}" opacity="0.5"/>`;
+    if (lid === 'double') s += `<path d="M${f(x - ew * 0.75)},${f(ey - eh * 1.15)} Q${f(x)},${f(top - eh * 0.9)} ${f(x + ew * 0.95)},${f(ey - eh * 0.95)}" fill="none" stroke="${P.shadow}" stroke-width="1" stroke-linecap="round"/>`;
+    if (lid === 'hooded') s += `<path d="M${f(x - ew - 1.5)},${f(ey - eh * 0.7)} Q${f(x)},${f(top - eh * 0.75)} ${f(x + ew + 2)},${f(ey - eh * 0.1)}" fill="none" stroke="${P.shadow}" stroke-width="1.5" stroke-linecap="round" opacity="0.85"/>`;
+    if (lid === 'deep-set') s += `<path d="M${f(x - ew * 0.9)},${f(ey - eh * 1.5)} Q${f(x)},${f(top - eh * 1.2)} ${f(x + ew)},${f(ey - eh * 1.2)}" fill="none" stroke="${P.deep}" stroke-width="1.1" opacity="0.7"/>`;
+    // Lash line, with a small flick at the outer corner.
+    const outer = x + side * ew;
+    s += `<path d="M${f(x - ew)},${f(ey)} Q${f(x - ew * 0.2)},${f(top)} ${f(x + ew)},${f(ey - 0.5)}" fill="none" stroke="${lash}" stroke-width="${lid === 'monolid' ? 1.9 : 1.6}" stroke-linecap="round"/>`;
+    s += `<path d="M${f(outer - side * 3)},${f(ey - eh * 0.9)} q${side * 2.4},-0.4 ${side * 4},-1.6" fill="none" stroke="${lash}" stroke-width="1.1" stroke-linecap="round"/>`;
+    s += `<path d="M${f(x - ew * 0.8)},${f(ey + eh * 0.55)} Q${f(x)},${f(ey + eh * 1.5)} ${f(x + ew * 0.85)},${f(ey + eh * 0.45)}" fill="none" stroke="${P.shadow}" stroke-width="0.7" opacity="0.75"/>`;
+    s += `<path d="M${f(x - ew * 0.6)},${f(ey + eh * 1.3)} Q${f(x)},${f(ey + eh * 2.1)} ${f(x + ew * 0.6)},${f(ey + eh * 1.2)}" fill="none" stroke="${P.shade}" stroke-width="1.2" opacity="0.35"/>`;
+    s += '</g>';
+  }
+  // Brows drawn as individual hairs over a soft base.
+  const browBase = mixHex(HAIR_COLORS[a.hair.color], '#bdb8b0', v.grey * 0.6);
+  const brow = shadeHex(browBase, relativeLuminance(browBase) > 0.25 ? 0.7 : 0.95);
+  const thick = 1.2 + a.face.browThickness * 2.8;
+  for (const side of [-1, 1]) {
+    const x = cx + side * dx;
+    const by = ey - eh * 2 - 5;
+    const arch = 2 + a.face.browArch * 4;
+    const p0 = [x - side * (ew + 1), by + 2], p1 = [x + side, by - arch], p2 = [x + side * (ew + 3), by + 2.5];
+    const at = (t) => [(1 - t) ** 2 * p0[0] + 2 * (1 - t) * t * p1[0] + t * t * p2[0], (1 - t) ** 2 * p0[1] + 2 * (1 - t) * t * p1[1] + t * t * p2[1]];
+    s += `<path d="M${f(p0[0])},${f(p0[1])} Q${f(p1[0])},${f(p1[1])} ${f(p2[0])},${f(p2[1])}" fill="none" stroke="${brow}" stroke-width="${f(thick)}" stroke-linecap="round" opacity="0.55"/>`;
+    s += `<g stroke="${brow}" stroke-width="0.55" stroke-linecap="round">`;
+    const hairs = Math.round(10 + a.face.browThickness * 14);
+    for (let i = 0; i < hairs; i++) {
+      const t = i / hairs;
+      const [hx, hy] = at(t);
+      const len = thick * rng.range(1.1, 1.8) * (t > 0.85 ? 0.6 : 1);
+      const off = rng.range(-thick / 2, thick / 2);
+      const rise = t < 0.3 ? 0.9 : 0.35;
+      s += `<line x1="${f(hx)}" y1="${f(hy + off)}" x2="${f(hx + side * len * (1 - rise * 0.5))}" y2="${f(hy + off - len * rise)}"/>`;
+    }
+    s += '</g>';
+  }
+  return s;
+}
+
+function noseMouthSvg(ctx, a, g, P) {
+  const { cx, ny, my } = g;
+  const nw = 6 + a.face.noseWidth * 7;
+  let s = '';
+  s += `<path d="M${f(cx - nw)},${f(ny - 2)} Q${f(cx - nw - 2.5)},${f(ny + 4)} ${f(cx - nw * 0.45)},${f(ny + 4.2)}" fill="none" stroke="${P.shadow}" stroke-width="1.3" stroke-linecap="round"/>`;
+  s += `<path d="M${f(cx + nw)},${f(ny - 2)} Q${f(cx + nw + 2.5)},${f(ny + 4)} ${f(cx + nw * 0.45)},${f(ny + 4.2)}" fill="none" stroke="${P.deep}" stroke-width="1.4" stroke-linecap="round" opacity="0.8"/>`;
+  s += `<path d="M${f(cx - nw * 0.45)},${f(ny + 4.2)} Q${cx},${f(ny + 6.6)} ${f(cx + nw * 0.45)},${f(ny + 4.2)}" fill="none" stroke="${P.shadow}" stroke-width="0.9" opacity="0.7"/>`;
+  for (const side of [-1, 1]) {
+    const nx = cx + side * nw * 0.42;
+    s += `<ellipse cx="${f(nx)}" cy="${f(ny + 3)}" rx="${f(1.5 + a.face.noseWidth * 1.1)}" ry="1.3" fill="${P.deep}" transform="rotate(${side * 12} ${f(nx)} ${f(ny + 3)})"/>`;
+  }
+
+  const mw = 9 + a.face.lipFullness * 4 + a.face.jaw * 2 + a.face.mouthWidth * 4;
+  const up = 2 + a.face.lipFullness * 3.2;
+  const lo = 2.6 + a.face.lipFullness * 4;
+  const upperFill = ctx.linear([[0, shadeHex(P.lipUpper, 1.05)], [1, shadeHex(P.lipUpper, 0.85)]]);
+  const lowerFill = ctx.linear([[0, shadeHex(P.lip, 0.8)], [0.45, P.lip], [1, shadeHex(P.lip, 0.92)]]);
+  s += `<path d="M${f(cx - mw)},${f(my)} Q${f(cx - mw * 0.55)},${f(my - up * 1.05)} ${f(cx - 2.2)},${f(my - up * 0.95)} Q${cx},${f(my - up * 0.55)} ${f(cx + 2.2)},${f(my - up * 0.95)} Q${f(cx + mw * 0.55)},${f(my - up * 1.05)} ${f(cx + mw)},${f(my)}Z" fill="${upperFill}"/>`;
+  s += `<path d="M${f(cx - mw)},${f(my)} Q${f(cx - mw * 0.5)},${f(my + lo * 1.5)} ${cx},${f(my + lo * 1.55)} Q${f(cx + mw * 0.5)},${f(my + lo * 1.5)} ${f(cx + mw)},${f(my)}Z" fill="${lowerFill}"/>`;
+  s += `<path d="M${f(cx - mw - 0.6)},${f(my + 0.2)} Q${f(cx - mw * 0.4)},${f(my + 1.2)} ${cx},${f(my + 0.6)} Q${f(cx + mw * 0.4)},${f(my + 1.2)} ${f(cx + mw + 0.6)},${f(my + 0.2)}" fill="none" stroke="${P.deep}" stroke-width="1.05" stroke-linecap="round"/>`;
+  s += `<ellipse cx="${cx - 2}" cy="${f(my + lo * 0.75)}" rx="${f(mw * 0.32)}" ry="${f(lo * 0.28)}" fill="#fff" opacity="0.2" filter="${ctx.blur(1)}"/>`;
+  s += `<path d="M${f(cx - mw * 0.5)},${f(my - up * 1.2)} Q${cx},${f(my - up * 1.5)} ${f(cx + mw * 0.3)},${f(my - up * 1.25)}" fill="none" stroke="${P.highlight}" stroke-width="0.8" opacity="0.4"/>`;
+  for (const side of [-1, 1]) s += `<circle cx="${f(cx + side * (mw + 0.8))}" cy="${f(my + 0.2)}" r="1" fill="${P.deep}" opacity="0.5"/>`;
+  if (a.marks.dimples) {
+    for (const side of [-1, 1]) s += `<path d="M${f(cx + side * (mw + 4))},${f(my - 3)} q${side},3 0,5" fill="none" stroke="${P.shadow}" stroke-width="0.9" opacity="0.6"/>`;
+  }
+  return s;
+}
+
+function marksSvg(ctx, a, v, g, P, rng) {
+  const { cx, cy, W } = g;
+  let s = '';
+  if (a.marks.vitiligo) {
+    const vr = new Rng(a.marks.vitiligo.seed);
+    const light = mixHex(a.skin.hex, '#f2e4d8', 0.75);
+    for (let i = 0; i < a.marks.vitiligo.patches; i++) {
+      const px = cx + vr.range(-W * 0.7, W * 0.7), py = cy + vr.range(-30, 40);
+      const pts = Array.from({ length: 8 }, (_, k) => {
+        const ang = (k / 8) * Math.PI * 2, rr = vr.range(3, 8);
+        return [px + rr * Math.cos(ang), py + rr * Math.sin(ang)];
+      });
+      s += `<path d="${smoothClosed(pts)}" fill="${light}" opacity="0.9" filter="${ctx.blur(0.5)}"/>`;
+    }
+  }
+  if (a.marks.freckles) {
+    const n = Math.round(14 + a.marks.freckles * 36);
+    const fc = shadeHex(a.skin.hex, 0.66);
+    for (let i = 0; i < n; i++) {
+      const side = i % 2 ? 1 : -1;
+      const x = cx + side * rng.range(2, W * 0.75), y = g.ey + rng.range(8, 24) + Math.abs(x - cx) * 0.08;
+      s += `<circle cx="${f(x)}" cy="${f(y)}" r="${f(rng.range(0.45, 1.05))}" fill="${fc}" opacity="${f(rng.range(0.45, 0.8))}"/>`;
+    }
+  }
+  for (const m of a.marks.moles) s += `<circle cx="${f(cx - W + m.x * 2 * W)}" cy="${f(cy - 40 + m.y * 90)}" r="0.95" fill="${P.deep}"/>`;
+  if (a.marks.birthmark) s += `<ellipse cx="${f(cx - W + a.marks.birthmark.x * 2 * W)}" cy="${f(cy - 40 + a.marks.birthmark.y * 90)}" rx="4" ry="2.6" fill="${mixHex(a.skin.hex, '#7a3b2e', 0.3)}" opacity="0.6" filter="${ctx.blur(0.6)}"/>`;
+  if (v.wrinkles > 0.05) {
+    s += `<g fill="none" stroke="${P.shadow}" stroke-width="0.8" opacity="${f(v.wrinkles * 0.7)}" stroke-linecap="round">`;
+    s += `<path d="M${cx - 16},${f(cy - 32)} q16,-3 32,0"/>`;
+    if (v.wrinkles > 0.4) s += `<path d="M${cx - 12},${f(cy - 37)} q12,-2 24,0"/><path d="M${cx - 3},${f(g.ey - 11)} v-4 M${cx + 3},${f(g.ey - 11)} v-4"/>`;
+    s += `<path d="M${cx - 12},${f(g.ny + 2)} q-6,8 -4,${f(g.my - g.ny + 4)}"/><path d="M${cx + 12},${f(g.ny + 2)} q6,8 4,${f(g.my - g.ny + 4)}"/>`;
+    for (const side of [-1, 1]) s += `<path d="M${cx + side * 31},${f(g.ey - 2)} l${side * 5},-2 M${cx + side * 31},${f(g.ey + 1)} l${side * 5},1"/>`;
+    if (v.wrinkles > 0.6) s += `<path d="M${cx - 20},${f(g.ey + 9)} q6,3 12,1 M${cx + 8},${f(g.ey + 10)} q6,2 12,-1"/>`;
+    s += '</g>';
+  }
+  for (const sc of v.scars) {
+    const side = sc.side === 'left' ? -1 : 1;
+    const [sx, sy] = sc.location === 'brow' ? [cx + side * 20, g.ey - 20] : sc.location === 'chin' ? [cx + side * 6, g.my + 12] : [cx + side * 24, g.ey + 12];
+    s += `<path d="M${f(sx - 5)},${f(sy - 6)} L${f(sx + 5)},${f(sy + 7)}" stroke="${mixHex(P.highlight, '#d8b0a6', 0.45)}" stroke-width="2" stroke-linecap="round"/>`;
+    s += `<path d="M${f(sx - 5)},${f(sy - 6)} L${f(sx + 5)},${f(sy + 7)}" stroke="${P.shadow}" stroke-width="0.5" stroke-dasharray="1.5 2"/>`;
+  }
+  for (const t of v.tattoos) {
+    const tcol = mixHex(P.deep, '#1b2a4a', 0.5);
+    const [tx, ty] = t.location === 'forehead' ? [cx, cy - 34] : t.location === 'chin' ? [cx, g.my + 12] : [cx - 25, g.ey + 14];
+    s += `<g stroke="${tcol}" stroke-width="1.1" fill="none" opacity="0.85"><path d="M${f(tx - 6)},${f(ty)} l6,-5 l6,5 l-6,5z"/><path d="M${f(tx)},${f(ty - 9)} v-3 M${f(tx)},${f(ty + 9)} v3"/></g>`;
+  }
+  return s;
+}
+
+function facialHairSvg(ctx, style, g, color, tex, rng) {
+  if (style === 'none') return '';
+  const { cx, cy, H, W, my, jawW } = g;
+  const pal = hairPalette(color);
+  if (style === 'stubble') {
+    let s = `<path d="M${f(cx - W * 0.86)},${f(cy + 8)} Q${f(cx - jawW)},${f(cy + H * 0.9)} ${cx},${f(cy + H)} Q${f(cx + jawW)},${f(cy + H * 0.9)} ${f(cx + W * 0.86)},${f(cy + 8)} Q${cx},${f(my + 2)} ${f(cx - W * 0.86)},${f(cy + 8)}Z" fill="${pal.dark}" opacity="0.12" filter="${ctx.blur(2.5)}"/><g fill="${pal.dark}" opacity="0.24">`;
+    for (let i = 0; i < 320; i++) {
+      const ang = rng.range(0.05, Math.PI - 0.05);
+      const rr = rng.range(0.5, 1);
+      const x = cx + Math.cos(ang) * W * 0.86 * rr, y = cy + 12 + Math.sin(ang) * (H - 10) * rr;
+      if (Math.abs(x - cx) < 13 && y < my + 5 && y > my - 6) continue;
+      s += `<circle cx="${f(x)}" cy="${f(y)}" r="${f(rng.range(0.22, 0.42))}"/>`;
+    }
+    return s + `</g><ellipse cx="${cx}" cy="${f(cy + H * 0.65)}" rx="${f(jawW)}" ry="${f(H * 0.35)}" fill="${pal.base}" opacity="0.1" filter="${ctx.blur(3)}"/>`;
+  }
+  const moustache = [[cx - 15, my + 1], [cx - 9, my - 6], [cx - 2, my - 6.5], [cx, my - 5], [cx + 2, my - 6.5], [cx + 9, my - 6], [cx + 15, my + 1], [cx, my - 2.5]];
+  const tache = hairMass(ctx, moustache, tex === 'straight' ? 'straight' : 'wavy', color, rng, { detail: 2 });
+  if (style === 'moustache') return tache;
+  const depth = style === 'full-beard' ? 20 : 9;
+  const beard = [
+    [cx - W * 0.93, cy + 2], [cx - W * 0.82, cy + H * 0.6], [cx - 15, cy + H + depth * 0.6], [cx, cy + H + depth], [cx + 15, cy + H + depth * 0.6],
+    [cx + W * 0.82, cy + H * 0.6], [cx + W * 0.93, cy + 2], [cx + W * 0.76, cy + 18], [cx + 16, my - 4], [cx, my - 6], [cx - 16, my - 4], [cx - W * 0.76, cy + 18],
+  ];
+  const btex = tex === 'straight' ? 'wavy' : tex;
+  const mouthGap = `<path d="M${cx - 11},${f(my + 0.5)} Q${cx},${f(my + 9)} ${cx + 11},${f(my + 0.5)} Q${cx},${f(my + 3)} ${cx - 11},${f(my + 0.5)}Z" fill="${pal.deep}" opacity="0.65"/>`;
+  return `${hairMass(ctx, beard, btex, color, rng, { detail: 1.2 })}${mouthGap}${tache}`;
+}
+
+// ---------------------------------------------------------------------------
+// Clothing (presentation only; derived from the seed, not from status)
+
+const CLOTHING_STYLES = ['tunic', 'v-neck', 'wrap', 'high-collar', 'shawl', 'coat'];
+
+function clothingSvg(ctx, a, g, shoulder, neckW) {
+  const { cx, cy } = g;
+  const h = hashString(`${a.seed}::clothing`);
+  const style = CLOTHING_STYLES[h % CLOTHING_STYLES.length];
+  const hue = a.clothingHue;
+  const sat = 22 + (h % 25);
+  const base = `hsl(${hue} ${sat}% 36%)`;
+  const lit = `hsl(${hue} ${sat}% 47%)`;
+  const dark = `hsl(${hue} ${sat}% 22%)`;
+  const trimHue = (hue + 180 + ((h >> 5) % 60)) % 360;
+  const trim = `hsl(${trimHue} 38% 58%)`;
+  const fill = ctx.linear([[0, lit], [0.55, base], [1, dark]], { x1: 0, y1: 0, x2: 1, y2: 0.3 });
+  const top = cy + 76;
+  const L = f(cx - neckW - 8), R = f(cx + neckW + 8);
+  let s = `<path d="M${f(cx - shoulder)},242 L${f(cx - shoulder + 3)},${cy + 104} Q${f(cx - shoulder + 8)},${top + 2} ${L},${top - 2} L${R},${top - 2} Q${f(cx + shoulder - 8)},${top + 2} ${f(cx + shoulder - 3)},${cy + 104} L${f(cx + shoulder)},242Z" fill="${fill}"/>`;
+  s += `<g fill="none" stroke="${dark}" stroke-linecap="round" opacity="0.55"><path d="M${f(cx - shoulder + 16)},${cy + 112} q6,40 2,90" stroke-width="2"/><path d="M${f(cx + shoulder - 18)},${cy + 108} q-8,40 -4,100" stroke-width="2.4"/><path d="M${cx - 18},${cy + 118} q3,20 0,40" stroke-width="1.2"/></g>`;
+  s += `<path d="M${f(cx - shoulder + 10)},${cy + 100} q14,-18 34,-20" fill="none" stroke="${lit}" stroke-width="2" opacity="0.6" stroke-linecap="round"/>`;
+  const nl = f(cx - neckW - 6), nr = f(cx + neckW + 6);
+  switch (style) {
+    case 'tunic':
+      s += `<path d="M${f(cx - neckW - 7)},${top - 2} Q${cx},${top + 18} ${f(cx + neckW + 7)},${top - 2}" fill="none" stroke="${trim}" stroke-width="4"/>`;
+      break;
+    case 'v-neck':
+      s += `<path d="M${nl},${top - 2} L${cx},${top + 30} L${nr},${top - 2}Z" fill="${g.skin}"/>`;
+      s += `<path d="M${cx - 4},${top + 4} L${cx},${top + 28} L${cx + 6},${top + 4}Z" fill="${g.shade}" opacity="0.6" filter="${ctx.blur(2)}"/>`;
+      s += `<path d="M${nl},${top - 2} L${cx},${top + 30} L${nr},${top - 2}" fill="none" stroke="${trim}" stroke-width="3" stroke-linejoin="round"/>`;
+      break;
+    case 'wrap':
+      s += `<path d="M${nl},${top - 2} L${cx + 12},${top + 40} L${nr},${top - 2}Z" fill="${g.skin}"/>`;
+      s += `<path d="M${cx + 2},${top + 8} L${cx + 12},${top + 38} L${cx + 16},${top + 10}Z" fill="${g.shade}" opacity="0.5" filter="${ctx.blur(2)}"/>`;
+      s += `<path d="M${nr},${top - 2} L${cx - 20},242" stroke="${dark}" stroke-width="2.5" fill="none"/><path d="M${nl},${top - 2} L${cx + 12},${top + 40} L${nr},${top - 2}" fill="none" stroke="${trim}" stroke-width="3.5"/>`;
+      break;
+    case 'high-collar':
+      s += `<path d="M${f(cx - neckW - 2)},${top - 14} L${f(cx - neckW - 4)},${top + 4} Q${cx},${top + 10} ${f(cx + neckW + 4)},${top + 4} L${f(cx + neckW + 2)},${top - 14} Q${cx},${top - 8} ${f(cx - neckW - 2)},${top - 14}Z" fill="${base}" stroke="${trim}" stroke-width="1.6"/>`;
+      s += `<path d="M${cx},${top + 6} V242" stroke="${trim}" stroke-width="1.5"/>`;
+      for (let i = 0; i < 4; i++) s += `<circle cx="${cx + 4}" cy="${top + 18 + i * 13}" r="1.6" fill="${trim}"/>`;
+      break;
+    case 'shawl': {
+      const sf = ctx.linear([[0, `hsl(${trimHue} 35% 56%)`], [1, `hsl(${trimHue} 35% 32%)`]], { x1: 0, y1: 0, x2: 1, y2: 1 });
+      s += `<path d="M${f(cx - neckW - 7)},${top - 2} Q${cx},${top + 14} ${f(cx + neckW + 7)},${top - 2}" fill="none" stroke="${dark}" stroke-width="3"/>`;
+      s += `<path d="M${f(cx - shoulder - 2)},${cy + 112} Q${f(cx - shoulder + 10)},${top - 6} ${f(cx - neckW - 4)},${top - 4} Q${cx + 10},${top + 34} ${f(cx + shoulder - 6)},${cy + 150} L${f(cx + shoulder - 20)},242 L${f(cx - shoulder)},242Z" fill="${sf}"/>`;
+      s += `<g fill="none" stroke="hsl(${trimHue} 35% 44%)" stroke-width="1.6" opacity="0.8"><path d="M${f(cx - shoulder + 8)},${cy + 130} Q${cx},${cy + 120} ${f(cx + shoulder - 16)},${cy + 170}"/><path d="M${f(cx - shoulder + 4)},${cy + 150} Q${cx},${cy + 140} ${f(cx + shoulder - 22)},${cy + 196}"/></g>`;
+      s += `<path d="M${f(cx - shoulder + 2)},${cy + 160} Q${cx},${cy + 150} ${f(cx + shoulder - 24)},${cy + 214}" fill="none" stroke="${trim}" stroke-width="2.5" stroke-dasharray="3 3"/>`;
+      break;
+    }
+    case 'coat':
+      s += `<path d="M${nl},${top - 2} L${cx - 4},${top + 44} L${f(cx - neckW - 22)},${top + 12}Z" fill="${lit}" opacity="0.9"/><path d="M${nr},${top - 2} L${cx + 4},${top + 44} L${f(cx + neckW + 22)},${top + 12}Z" fill="${dark}" opacity="0.9"/>`;
+      s += `<path d="M${f(cx - neckW - 4)},${top - 2} L${cx},${top + 28} L${f(cx + neckW + 4)},${top - 2}Z" fill="hsl(${trimHue} 20% 85%)"/>`;
+      for (let i = 0; i < 3; i++) s += `<circle cx="${cx}" cy="${top + 52 + i * 18}" r="2" fill="${trim}"/>`;
+      break;
+  }
+  return s;
+}
+
+// ---------------------------------------------------------------------------
+
+/**
+ * Render a portrait.
+ * Options: { size, title, background (default true), detail (lower for tiny renders) }
+ */
+function renderPortrait(a, { size = 200, title, background = true, detail = 1 } = {}) {
+  const v = visibleAppearance(a);
+  const rng = Rng.stream(a.seed, `portrait:${a.age}:${a.events.length}`);
+  const uid = `p${hashString(`${a.seed}|${a.age}|${JSON.stringify(a.events)}|${size}|${background}|${detail}|${title ?? ''}`).toString(36)}`;
+  const ctx = new Ctx(uid);
+  const g = geometry(a, v);
+  const { cx, cy, W } = g;
+  const skin = a.skin.hex;
+  const P = featurePalette(skin);
+  g.skin = skin;
+  g.shade = P.shade;
+  const hairColor = v.hairHex;
+  const buildIdx = ['slight', 'lean', 'average', 'sturdy', 'broad', 'heavy'].indexOf(a.body.build) + v.buildShift;
+  const shoulder = (g.child ? 58 : 74) + clamp(buildIdx, 0, 5) * 4.5;
+  const neckW = W * 0.42 + clamp(buildIdx, 0, 5) * 1.1 - (g.child ? 2 : 0);
+
+  const parts = [];
+  if (background) {
+    const bgHue = (a.clothingHue + 190) % 360;
+    const bg = ctx.radial([[0, `hsl(${bgHue} 22% 84%)`], [0.7, `hsl(${bgHue} 18% 72%)`], [1, `hsl(${bgHue} 20% 58%)`]], { cx: 0.42, cy: 0.38, r: 0.75 });
+    parts.push(`<rect width="200" height="240" fill="${bg}"/>`);
+    parts.push(`<ellipse cx="${cx - 10}" cy="${cy - 20}" rx="80" ry="90" fill="hsl(${bgHue} 30% 92%)" opacity="0.45" filter="${ctx.blur(12)}"/>`);
+  }
+  const hair = hairSvg(ctx, a, v, g, hairColor, rng, detail);
+  parts.push(hair.back);
+
+  // Neck with the jaw's cast shadow.
+  const neckFill = ctx.linear([[0, P.shade], [0.4, skin], [1, shadeHex(skin, 0.92)]]);
+  parts.push(`<path d="M${f(cx - neckW)},${cy + 26} L${f(cx - neckW - 1.5)},${cy + 84} L${f(cx + neckW + 1.5)},${cy + 84} L${f(cx + neckW)},${cy + 26}Z" fill="${neckFill}"/>`);
+  parts.push(`<path d="M${f(cx - neckW - 1)},${cy + 40} Q${cx},${cy + 62} ${f(cx + neckW + 1)},${cy + 40} L${f(cx + neckW + 1)},${cy + 30} L${f(cx - neckW - 1)},${cy + 30}Z" fill="${P.deep}" opacity="0.5" filter="${ctx.blur(2.5)}"/>`);
+  parts.push(`<path d="M${f(cx + neckW * 0.3)},${cy + 50} L${f(cx + neckW + 1)},${cy + 84}" stroke="${P.shade}" stroke-width="5" opacity="0.5" filter="${ctx.blur(2)}"/>`);
+  parts.push(clothingSvg(ctx, a, g, shoulder, neckW));
+
+  // Ears.
+  const earR = 6 + a.face.earSize * 3;
+  for (const side of [-1, 1]) {
+    const ex = cx + side * (W - 1);
+    parts.push(`<ellipse cx="${f(ex)}" cy="${cy + 1}" rx="${f(earR * 0.62)}" ry="${f(earR)}" fill="${side < 0 ? skin : P.shade}"/>`);
+    parts.push(`<path d="M${f(ex + side)},${f(cy - earR * 0.6)} q${f(side * earR * 0.45)},${f(earR * 0.5)} 0,${f(earR * 1.2)}" fill="none" stroke="${P.shadow}" stroke-width="1.2" opacity="0.8"/>`);
+  }
+
+  // Face.
+  const faceD = smoothClosed(g.outline);
+  const faceClip = ctx.clip(faceD);
+  const faceFill = ctx.linear([[0, P.lit], [0.45, skin], [1, shadeHex(skin, 0.9)]], { x1: 0, y1: 0.2, x2: 1, y2: 0.6 });
+  parts.push(`<path d="${faceD}" fill="${faceFill}"/>`);
+  parts.push(faceModelling(ctx, a, g, P, faceClip));
+  if (hair.shadowLine !== null) {
+    parts.push(`<g clip-path="${faceClip}"><ellipse cx="${cx}" cy="${f(hair.shadowLine - 2)}" rx="${f(W * 1.1)}" ry="7" fill="${P.deep}" opacity="0.45" filter="${ctx.blur(3)}"/></g>`);
+  }
+  parts.push(marksSvg(ctx, a, v, g, P, rng));
+  parts.push(eyesSvg(ctx, a, v, g, P, rng));
+  parts.push(noseMouthSvg(ctx, a, g, P));
+  if (a.age >= 16) parts.push(facialHairSvg(ctx, v.facialHair, g, hairColor, a.hair.texture, rng));
+  parts.push(hair.front);
+  if (v.spectacles) {
+    const ey = g.ey;
+    parts.push(`<g fill="none" stroke="#3a3330" stroke-width="1.5"><circle cx="${cx - 17}" cy="${f(ey)}" r="11.5" fill="#dfe8ee" fill-opacity="0.12"/><circle cx="${cx + 17}" cy="${f(ey)}" r="11.5" fill="#dfe8ee" fill-opacity="0.12"/><path d="M${cx - 6},${f(ey - 1)} q6,-3 12,0 M${cx - 28.5},${f(ey - 2)} L${f(cx - W)},${f(ey - 4)} M${cx + 28.5},${f(ey - 2)} L${f(cx + W)},${f(ey - 4)}"/></g>`);
+    parts.push(`<path d="M${cx - 24},${f(ey - 6)} l5,-4 M${cx + 10},${f(ey - 6)} l5,-4" stroke="#fff" stroke-width="1.2" opacity="0.6"/>`);
+  }
+  const label = title ?? `Portrait of character ${a.id}`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 240" width="${size}" height="${Math.round(size * 1.2)}" role="img" aria-label="${escapeXml(label)}"><title>${escapeXml(label)}</title><defs>${ctx.defs.join('')}</defs>${parts.join('')}</svg>`;
+}
+
+function escapeXml(s) {
+  return String(s).replace(/[<>&"']/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' })[c]);
+}
+
+return { featurePalette, CLOTHING_STYLES, renderPortrait };
+})();
+__m["src/portrait/scene.js"] = (() => {
+// Scene illustrations (historical events, markets, public spaces) composed
+// from persistent character portraits, so the same people look the same in
+// dossiers and in scenes.
+
+const { renderPortrait } = __m["src/portrait/svg.js"];
+const { hashString } = __m["src/appearance/rng.js"];
+
+const SETTINGS = {
+  plaza: { sky: ['#a9c3d6', '#e9eef0'], ground: ['#cbb698', '#a08665'], stone: '#c9b597', label: 'Public square' },
+  harbour: { sky: ['#9fc0d4', '#eaf1f2'], ground: ['#7f9ead', '#5f7f8f'], stone: '#b9a284', label: 'Harbour' },
+  council: { sky: ['#c8b79c', '#efe5d2'], ground: ['#9b7d5d', '#715a42'], stone: '#a88d6c', label: 'Council hall' },
+  market: { sky: ['#b8cfd9', '#f1ebdc'], ground: ['#d2b88f', '#a98c62'], stone: '#c4a982', label: 'Market' },
+};
+
+const W = 640;
+const H = 360;
+
+function backdrop(setting, uid) {
+  const s = SETTINGS[setting];
+  let out = `<defs>
+    <linearGradient id="${uid}sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${s.sky[0]}"/><stop offset="1" stop-color="${s.sky[1]}"/></linearGradient>
+    <linearGradient id="${uid}gr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${s.ground[0]}"/><stop offset="1" stop-color="${s.ground[1]}"/></linearGradient>
+    <linearGradient id="${uid}haze" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${s.sky[1]}" stop-opacity="0"/><stop offset="1" stop-color="${s.sky[1]}" stop-opacity="0.55"/></linearGradient>
+    <filter id="${uid}soft"><feGaussianBlur stdDeviation="1.2"/></filter>
+  </defs>`;
+  out += `<rect width="${W}" height="${H}" fill="url(#${uid}sky)"/>`;
+  const seed = hashString(setting);
+  if (setting === 'council') {
+    // Interior: columns and a hanging banner.
+    out += `<rect y="40" width="${W}" height="150" fill="${s.stone}" opacity="0.5"/>`;
+    for (let i = 0; i < 8; i++) {
+      const x = 30 + i * 84;
+      out += `<rect x="${x}" y="30" width="22" height="170" fill="${s.stone}"/><rect x="${x + 15}" y="30" width="7" height="170" fill="#000" opacity="0.12"/><rect x="${x - 5}" y="26" width="32" height="8" fill="${s.stone}"/>`;
+    }
+    out += `<path d="M290,30 h60 v90 l-30,-14 l-30,14z" fill="#6d2f2f"/><circle cx="320" cy="66" r="12" fill="none" stroke="#d6b26e" stroke-width="2.5"/>`;
+  } else {
+    // Skyline of the town, with arches and domes, fading into the distance.
+    for (let layer = 0; layer < 2; layer++) {
+      const base = layer ? 190 : 175;
+      for (let i = 0; i < 9; i++) {
+        const h = 50 + ((seed >> (i + layer)) % 5) * 14 + layer * 10;
+        const w = 64 + ((i * 29 + layer * 17) % 30);
+        const x = i * 76 - 20 + layer * 30;
+        const fill = layer ? s.stone : '#9aa7ad';
+        out += `<rect x="${x}" y="${base - h}" width="${w}" height="${h + 10}" fill="${fill}" opacity="${layer ? 0.95 : 0.5}"/>`;
+        if ((i + layer) % 3 === 0) out += `<path d="M${x + 8},${base - h} a${w / 2 - 8},${w / 2 - 14} 0 0 1 ${w - 16},0z" fill="${fill}" opacity="${layer ? 0.95 : 0.5}"/>`;
+        if (layer) {
+          for (let k = 0; k < 3; k++) out += `<path d="M${x + 10 + k * 18},${base - h + 40} v-12 a5,5 0 0 1 10,0 v12z" fill="#4c3b2c" opacity="0.4"/>`;
+          out += `<rect x="${x + w - 8}" y="${base - h}" width="8" height="${h + 10}" fill="#000" opacity="0.1"/>`;
+        }
+      }
+    }
+    if (setting === 'harbour') {
+      out += `<rect y="186" width="${W}" height="30" fill="#6f93a6"/>`;
+      out += `<g fill="#6b4f39"><path d="M430,176 h86 l-12,20 h-62z"/><rect x="470" y="96" width="3" height="82"/></g><path d="M473,100 l40,62 h-40z" fill="#efe6d4"/><path d="M470,104 l-30,50 h30z" fill="#e4d6bd"/>`;
+    }
+    if (setting === 'market') {
+      const awn = ['#b5523b', '#3b6f8c', '#c79a3a', '#4f7b4a'];
+      for (let i = 0; i < 5; i++) {
+        const x = 20 + i * 130;
+        out += `<path d="M${x},176 h96 l-8,-22 h-80z" fill="${awn[i % 4]}"/><path d="M${x},176 h96" stroke="#fff" stroke-width="2" stroke-dasharray="12 12" opacity="0.6"/><rect x="${x + 6}" y="176" width="3" height="40" fill="#5b4535"/><rect x="${x + 87}" y="176" width="3" height="40" fill="#5b4535"/>`;
+      }
+    }
+  }
+  // Ground with perspective paving.
+  out += `<rect y="200" width="${W}" height="${H - 200}" fill="url(#${uid}gr)"/>`;
+  out += `<g stroke="#000" stroke-opacity="0.08">`;
+  for (let i = -8; i <= 8; i++) out += `<line x1="${320 + i * 30}" y1="200" x2="${320 + i * 110}" y2="${H}"/>`;
+  for (const y of [212, 230, 256, 292, 340]) out += `<line x1="0" y1="${y}" x2="${W}" y2="${y}"/>`;
+  out += '</g>';
+  return out;
+}
+
+function placed(p, x, y, size, detail) {
+  return renderPortrait(p, { size, title: p.name ?? p.id, background: false, detail })
+    .replace('<svg ', `<svg x="${Math.round(x)}" y="${Math.round(y)}" `);
+}
+
+/**
+ * Render an event scene. `speaker` (optional) stands on a dais; `people`
+ * form a crowd in two rows with atmospheric depth.
+ */
+function renderScene(people, { setting = 'plaza', title = SETTINGS[setting].label, speaker = null } = {}) {
+  const uid = `s${hashString(setting + people.map((p) => p.id).join(',') + (speaker?.id ?? '')).toString(36)}`;
+  let body = backdrop(setting, uid);
+  const half = Math.ceil(people.length / 2);
+  const rows = [people.slice(0, half), people.slice(half)];
+  const drawRow = (row, r) => {
+    const size = r === 0 ? 78 : 112;
+    const y = r === 0 ? 190 : 226;
+    const gap = W / (row.length + 0.6);
+    row.forEach((p, i) => {
+      let x = gap * (i + 0.8) - size / 2;
+      if (speaker && r === 0 && Math.abs(x + size / 2 - 320) < 70) x += x + size / 2 < 320 ? -50 : 50;
+      body += placed(p, x, y, size, r === 0 ? 0.6 : 0.85);
+    });
+  };
+  drawRow(rows[0], 0);
+  body += `<rect y="150" width="${W}" height="${H - 150}" fill="url(#${uid}haze)" opacity="0.8"/>`;
+  if (speaker) {
+    body += `<path d="M262,214 h116 l10,22 h-136z" fill="#7a5a3e"/><rect x="252" y="236" width="136" height="10" fill="#5e4430"/>`;
+    body += `<rect x="236" y="96" width="4" height="140" fill="#5e4430"/><path d="M240,98 h44 l-8,14 l8,14 h-44z" fill="#8a2f2f"/>`;
+    body += placed(speaker, 270, 112, 100, 0.8);
+  }
+  drawRow(rows[1], 1);
+  const t = title.replace(/[<>&"]/g, '');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" role="img" aria-label="${t}"><title>${t}</title>${body}</svg>`;
+}
+
+return { SETTINGS, renderScene };
+})();
+__m["app/main.js"] = (() => {
+const { generateAppearance, representativeSample } = __m["src/appearance/generator.js"];
+const { REGIONS, REGION_IDS, SETTLEMENTS, ANCESTRAL_POOLS } = __m["src/appearance/population.js"];
+const { SKIN_TONE_CATEGORIES, skinHex, stylesForTexture, EYE_COLORS } = __m["src/appearance/traits.js"];
+const { applyEvent, withAge, visibleAppearance, EVENT_TYPES } = __m["src/appearance/lifecycle.js"];
+const { identityRecord } = __m["src/appearance/identity.js"];
+const { generateHousehold } = __m["src/appearance/family.js"];
+const { assignRole, assignRoleFromGroup } = __m["src/society/roles.js"];
+const { personName } = __m["src/society/names.js"];
+const { renderPortrait } = __m["src/portrait/svg.js"];
+const { renderScene } = __m["src/portrait/scene.js"];
+const { hashString } = __m["src/appearance/rng.js"];
+
+// ---------------------------------------------------------------------------
+// Small helpers
+
+const $ = (sel, root = document) => root.querySelector(sel);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const txt = (s) => String(s).replace(/-/g, ' ');
+const pct = (x) => `${Math.round(x * 100)}%`;
+const catOf = (id) => SKIN_TONE_CATEGORIES.find((c) => c.id === id);
+const catMid = (c) => (c.min + Math.min(c.max, 1)) / 2;
+const SHORT_CAT = { 'very-light': 'Very light', light: 'Light', 'light-olive': 'Light olive', medium: 'Medium', 'medium-brown': 'Medium brown', deep: 'Deep' };
+const POOL_COLORS = { uplander: '#7d9fb5', steppe: '#c79a4a', riverine: '#4f8f7d', savanna: '#a8573b', islander: '#5d6fa8', plateau: '#8c6b9e' };
+
+const ICONS = {
+  atlas: '<path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/>',
+  census: '<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>',
+  registry: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
+  households: '<path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/>',
+  public: '<circle cx="12" cy="7" r="3"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/><path d="M2 21h20"/>',
+  events: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 16 5-5 4 4 3-3 6 6"/>',
+  copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
+  dice: '<rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1.3"/><circle cx="16" cy="16" r="1.3"/><circle cx="12" cy="12" r="1.3"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+};
+const icon = (name) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`;
+
+const VIEWS = [
+  ['atlas', 'Atlas'],
+  ['census', 'Census'],
+  ['registry', 'Registry'],
+  ['households', 'Households'],
+  ['public', 'Public life'],
+  ['events', 'Events'],
+];
+
+function registryNo(a) {
+  const r = (a.context.regionId || 'xx').split('-').map((w) => w[0]).join('').toUpperCase();
+  return `${r}·${(hashString(a.id) % 90000 + 10000)}`;
+}
+
+// ---------------------------------------------------------------------------
+// Persistence (per-viewer; the app works without it)
+
+const STORE_KEY = 'iskar.registry.v1';
+const store = {
+  load() {
+    try { return JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch { return null; }
+  },
+  save(data) {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch { /* storage unavailable */ }
+  },
+};
+
+const state = {
+  view: 'atlas',
+  region: 'river-delta',
+  settlement: 'port',
+  round: 0,
+  partner: 'northern-uplands',
+  scene: 'plaza',
+  filter: { q: '', region: '', tone: '' },
+  current: null, // appearance being viewed in the dossier
+  viewAge: null,
+  people: new Map(), // registry: id -> appearance
+};
+
+function seedRegistry() {
+  const settlements = ['rural', 'town', 'urban', 'port'];
+  REGION_IDS.forEach((regionId, ri) => {
+    for (let i = 0; i < 4; i++) {
+      const a = generateAppearance({ id: `example:${regionId}:${i}`, regionId, settlement: settlements[(i + ri) % 4] });
+      a.example = true;
+      state.people.set(a.id, a);
+    }
+  });
+}
+
+function loadRegistry() {
+  const saved = store.load();
+  if (saved?.people?.length) for (const a of saved.people) state.people.set(a.id, a);
+  else seedRegistry();
+}
+function saveRegistry() {
+  store.save({ people: [...state.people.values()] });
+}
+function remember(a) {
+  if (state.people.has(a.id)) return state.people.get(a.id);
+  return a;
+}
+function inRegistry(a) {
+  return state.people.has(a.id);
+}
+
+// ---------------------------------------------------------------------------
+// Shared fragments
+
+function plate(a, line, { size = 220 } = {}) {
+  const name = personName(a.id);
+  return `<button class="plate" type="button" data-open="${esc(a.id)}">
+    <div class="frame">${renderPortrait(a, { size, title: name })}</div>
+    <div class="who"><b>${esc(name)}</b><span>${esc(line)}</span><span class="mono">${registryNo(a)}</span></div>
+  </button>`;
+}
+
+const transient = new Map(); // people shown on screen but not in the registry
+function track(list) {
+  for (const a of list) if (!state.people.has(a.id)) transient.set(a.id, a);
+  return list.map(remember);
+}
+function lookup(id) {
+  return state.people.get(id) ?? transient.get(id);
+}
+
+function toneDistribution(regionId, settlement, n = 1200) {
+  const counts = Object.fromEntries(SKIN_TONE_CATEGORIES.map((c) => [c.id, 0]));
+  const bins = new Array(20).fill(0);
+  let sum = 0;
+  let sq = 0;
+  for (let i = 0; i < n; i++) {
+    const a = generateAppearance({ id: `census:${regionId}:${settlement}:${i}`, regionId, settlement });
+    counts[a.skin.category]++;
+    bins[Math.min(19, Math.floor(a.skin.tone * 20))]++;
+    sum += a.skin.tone;
+    sq += a.skin.tone ** 2;
+  }
+  const mean = sum / n;
+  return { n, counts, bins, mean, sd: Math.sqrt(sq / n - mean * mean) };
+}
+const distCache = new Map();
+function cachedDist(regionId, settlement) {
+  const key = `${regionId}|${settlement}`;
+  if (!distCache.has(key)) distCache.set(key, toneDistribution(regionId, settlement));
+  return distCache.get(key);
+}
+
+function toneBar(dist) {
+  return `<div class="tonebar" aria-hidden="true">${SKIN_TONE_CATEGORIES.map((c) => `<span style="width:${(dist.counts[c.id] / dist.n) * 100}%;background:${skinHex(catMid(c))}"></span>`).join('')}</div>`;
+}
+
+function regionOptions(selected) {
+  return REGION_IDS.map((r) => `<option value="${r}"${r === selected ? ' selected' : ''}>${REGIONS[r].label}</option>`).join('');
+}
+function settlementSeg(selected, attr = 'data-settlement') {
+  return `<div class="seg" role="group" aria-label="Settlement type">${Object.entries(SETTLEMENTS).map(([k, v]) => `<button type="button" ${attr}="${k}" aria-pressed="${k === selected}">${v.label}</button>`).join('')}</div>`;
+}
+
+// ---------------------------------------------------------------------------
+// Atlas
+
+const MAP = {
+  'northern-uplands': { c: [330, 110], r: [150, 70], label: [330, 104] },
+  'eastern-steppe': { c: [545, 215], r: [95, 120], label: [548, 210] },
+  'river-delta': { c: [345, 245], r: [118, 72], label: [345, 240] },
+  'western-archipelago': { c: [110, 220], r: [70, 95], islands: true, label: [112, 216] },
+  'southwest-plateau': { c: [215, 370], r: [105, 62], label: [215, 366] },
+  'southern-savanna': { c: [440, 380], r: [130, 66], label: [440, 376] },
+};
+
+function blob(cx, cy, rx, ry, seed, n = 14) {
+  const pts = [];
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2;
+    const k = 0.82 + (((seed >> (i % 24)) & 7) / 7) * 0.26;
+    pts.push([cx + Math.cos(a) * rx * k, cy + Math.sin(a) * ry * k]);
+  }
+  let d = '';
+  for (let i = 0; i < n; i++) {
+    const p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i + 1) % n], p3 = pts[(i + 2) % n];
+    if (!i) d += `M${p1[0].toFixed(1)},${p1[1].toFixed(1)}`;
+    d += ` C${(p1[0] + (p2[0] - p0[0]) / 6).toFixed(1)},${(p1[1] + (p2[1] - p0[1]) / 6).toFixed(1)} ${(p2[0] - (p3[0] - p1[0]) / 6).toFixed(1)},${(p2[1] - (p3[1] - p1[1]) / 6).toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+  }
+  return d + 'Z';
+}
+
+function renderAtlas() {
+  const shapes = REGION_IDS.map((id) => {
+    const m = MAP[id];
+    const seed = hashString(id);
+    let land;
+    if (m.islands) {
+      land = [[0, 0, 1], [-30, -70, 0.45], [25, 72, 0.5], [-38, 40, 0.35]].map(([dx, dy, s], i) =>
+        `<path class="land" d="${blob(m.c[0] + dx, m.c[1] + dy, m.r[0] * s, m.r[1] * s * 0.6, seed >> i)}"/>`).join('');
+    } else land = `<path class="land" d="${blob(m.c[0], m.c[1], m.r[0], m.r[1], seed)}"/>`;
+    const dist = cachedDist(id, 'rural');
+    // mini tone strip under the label
+    let x = m.label[0] - 50;
+    const strip = SKIN_TONE_CATEGORIES.map((c) => {
+      const w = (dist.counts[c.id] / dist.n) * 100;
+      const r = `<rect x="${x.toFixed(1)}" y="${m.label[1] + 8}" width="${w.toFixed(1)}" height="7" fill="${skinHex(catMid(c))}"/>`;
+      x += w;
+      return r;
+    }).join('');
+    return `<g class="region${state.region === id ? ' on' : ''}" tabindex="0" role="button" data-region="${id}" aria-label="${REGIONS[id].label}">${land}<text class="label" x="${m.label[0]}" y="${m.label[1]}" text-anchor="middle">${REGIONS[id].label}</text>${strip}</g>`;
+  }).join('');
+  const rivers = `<path d="M330,150 C340,190 300,215 345,250 S360,300 330,330" fill="none" stroke="var(--map-sea)" stroke-width="5" stroke-linecap="round"/>`;
+  const list = REGION_IDS.map((id) => {
+    const dist = cachedDist(id, 'rural');
+    const faces = track(representativeSample({ regionId: id, settlement: 'town', count: 4, seed: 'atlas', oversample: 4 }));
+    return `<button class="region-row${state.region === id ? ' on' : ''}" type="button" data-region="${id}">
+      <div class="faces">${faces.map((a) => renderPortrait(a, { size: 40, title: personName(a.id), detail: 0.4 })).join('')}</div>
+      <div><b>${REGIONS[id].label}</b><div class="sub" style="font-size:13px;color:var(--ink-2)">Mean tone <span class="mono">${dist.mean.toFixed(2)}</span> · spread <span class="mono">${dist.sd.toFixed(2)}</span></div>${toneBar(dist)}</div>
+    </button>`;
+  }).join('');
+  return `<div class="view-head"><div><div class="eyebrow">Atlas of Iskar</div><h1>Six regions, one continuous range of people</h1><p>Each region draws on several ancestral populations in different proportions. The strip under each name is its rural skin-tone mix, from very light to deep. Choose a region to open its census.</p></div></div>
+  <div class="atlas">
+    <div class="panel map"><svg viewBox="0 0 660 460" role="group" aria-label="Map of Iskar"><rect class="sea" width="660" height="460" rx="12"/>${shapes}${rivers}</svg></div>
+    <div class="region-list">${list}</div>
+  </div>`;
+}
+
+// ---------------------------------------------------------------------------
+// Census
+
+function histogram(dist) {
+  const Wd = 560, Hd = 220, pl = 36, pb = 34, pt = 10;
+  const max = Math.max(...dist.bins) / dist.n;
+  const top = Math.ceil(max * 20) / 20 || 0.05; // round up to 5%
+  const bw = (Wd - pl - 8) / 20;
+  const y = (v) => pt + (Hd - pt - pb) * (1 - v / top);
+  let grid = '<g class="grid">';
+  for (let v = 0; v <= top + 1e-9; v += 0.05) grid += `<line x1="${pl}" x2="${Wd - 4}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}"/><text x="${pl - 6}" y="${(y(v) + 4).toFixed(1)}" text-anchor="end">${Math.round(v * 100)}%</text>`;
+  grid += '</g>';
+  const bars = dist.bins.map((c, i) => {
+    const v = c / dist.n;
+    return `<rect x="${(pl + i * bw + 1).toFixed(1)}" y="${y(v).toFixed(1)}" width="${(bw - 2).toFixed(1)}" height="${(y(0) - y(v)).toFixed(1)}" rx="2" fill="${skinHex((i + 0.5) / 20)}"><title>Tone ${(i / 20).toFixed(2)}–${((i + 1) / 20).toFixed(2)}: ${(v * 100).toFixed(1)}%</title></rect>`;
+  }).join('');
+  const ticks = [0, 0.25, 0.5, 0.75, 1].map((t) => `<text x="${(pl + t * 20 * bw).toFixed(1)}" y="${Hd - pb + 16}" text-anchor="middle">${t.toFixed(2)}</text>`).join('');
+  return `<svg viewBox="0 0 ${Wd} ${Hd}" role="img" aria-label="Distribution of skin tone, 0 very light to 1 very dark">${grid}${bars}${ticks}<text x="${pl}" y="${Hd - 4}">very light</text><text x="${Wd - 4}" y="${Hd - 4}" text-anchor="end">very dark</text></svg>`;
+}
+
+function renderCensus() {
+  const dist = cachedDist(state.region, state.settlement);
+  const sample = track(representativeSample({ regionId: state.region, settlement: state.settlement, count: 12, seed: `census:${state.round}` }));
+  const legend = SKIN_TONE_CATEGORIES.map((c) => `<div><span class="sw" style="background:${skinHex(catMid(c))}"></span><span>${c.label}</span><span class="mono">${pct(dist.counts[c.id] / dist.n)}</span></div>`).join('');
+  const plates = sample.map((a) => plate(a, `${a.age} · ${assignRole({ seed: a.id, settlement: state.settlement }).label}`)).join('');
+  return `<div class="view-head"><div><div class="eyebrow">Census</div><h1>${REGIONS[state.region].label}, ${SETTLEMENTS[state.settlement].label.toLowerCase()}</h1><p>Skin tone across ${dist.n.toLocaleString()} sampled residents, then twelve people drawn across the whole local range.</p></div>
+    <div class="controls"><label class="field">Region<select id="c-region">${regionOptions(state.region)}</select></label>${settlementSeg(state.settlement)}</div></div>
+  <div class="stack">
+    <div class="census-grid">
+      <div class="panel chart"><h2>Skin-tone distribution</h2><p class="sub">Share of residents in each 0.05 band of the tone scale.</p>${histogram(dist)}</div>
+      <div class="panel"><h2>By category</h2><p class="sub">Display categories derived from the continuous scale.</p><div class="legend">${legend}</div>
+        <div class="stats"><div><b>${dist.mean.toFixed(2)}</b><span>mean tone</span></div><div><b>${dist.sd.toFixed(2)}</b><span>spread (sd)</span></div><div><b>${Object.values(dist.counts).filter((v) => v > 0).length}/6</b><span>categories present</span></div></div></div>
+    </div>
+    <div class="panel"><div class="view-head" style="margin-bottom:12px"><div><h2>Residents</h2><p class="sub" style="margin:0">One person from each twelfth of the local tone range, chosen to look as different from each other as possible.</p></div><button class="btn" type="button" id="reroll">${icon('dice')}Draw new residents</button></div>
+      <div class="plates">${plates}</div></div>
+  </div>`;
+}
+
+// ---------------------------------------------------------------------------
+// Registry
+
+function renderRegistry() {
+  const { q, region, tone } = state.filter;
+  const all = [...state.people.values()];
+  const list = all.filter((a) =>
+    (!region || a.context.regionId === region) &&
+    (!tone || a.skin.category === tone) &&
+    (!q || personName(a.id).toLowerCase().includes(q.toLowerCase()) || registryNo(a).toLowerCase().includes(q.toLowerCase())));
+  const examples = all.some((a) => a.example);
+  const toneOpts = SKIN_TONE_CATEGORIES.map((c) => `<option value="${c.id}"${tone === c.id ? ' selected' : ''}>${SHORT_CAT[c.id]}</option>`).join('');
+  return `<div class="view-head"><div><div class="eyebrow">Registry</div><h1>${all.length} registered residents</h1><p>Everyone you add from a census, household or public panel is kept here with their life events, in this browser.</p></div>
+    <div class="controls">
+      <label class="field">Search<input type="search" id="f-q" value="${esc(q)}" placeholder="Name or number"></label>
+      <label class="field">Region<select id="f-region"><option value="">All regions</option>${regionOptions(region)}</select></label>
+      <label class="field">Skin tone<select id="f-tone"><option value="">All tones</option>${toneOpts}</select></label>
+    </div></div>
+  ${examples ? `<p class="example-note"><span class="chip">Examples</span>The registry starts with 24 example residents, four from each region.</p>` : ''}
+  <div class="panel">${list.length ? `<div class="plates">${list.map((a) => plate(a, `${REGIONS[a.context.regionId].label} · ${a.age}`)).join('')}</div>` : '<p class="sub">No one matches these filters. Clear the search or choose another region or tone.</p>'}</div>`;
+}
+
+// ---------------------------------------------------------------------------
+// Dossier
+
+function renderDossier() {
+  const base = state.current;
+  if (!base) return renderRegistry();
+  const age = state.viewAge ?? base.age;
+  const a = age === base.age ? base : withAge(base, age);
+  const v = visibleAppearance(a);
+  const name = personName(base.id);
+  const role = assignRole({ seed: base.id, settlement: base.context.settlement });
+  const cat = catOf(base.skin.category);
+  const ancestry = Object.entries(base.ancestry).sort((x, y) => y[1] - x[1]);
+  const id = identityRecord(base);
+  const origin = base.context.origin !== base.context.regionId ? `, family from ${REGIONS[base.context.origin].label}` : '';
+  const types = Object.entries(EVENT_TYPES).map(([k, l]) => `<option value="${k}">${l}</option>`).join('');
+  const history = base.events.length
+    ? `<ul class="history">${base.events.map((e) => `<li><span class="mono">age ${e.atAge}</span><span>${esc(EVENT_TYPES[e.type])}${e.side ? `, ${e.side}` : ''}${e.location ? ` ${e.location}` : ''}${e.style ? `: ${txt(e.style)}` : ''}</span></li>`).join('')}</ul>`
+    : '<p class="sub" style="margin:0">No recorded events yet. Events such as a scar or new hairstyle change how this person looks from that age on.</p>';
+  return `<div class="view-head"><div><div class="eyebrow">Dossier · <span class="record-no">${registryNo(base)}</span></div><h1>${esc(name)}</h1><p>${role.label} · ${REGIONS[base.context.regionId].label}, ${SETTLEMENTS[base.context.settlement].label.toLowerCase()}${origin}</p></div>
+    <div class="controls">${inRegistry(base) ? '<span class="chip">In registry</span>' : `<button class="btn primary" type="button" id="add-reg">${icon('plus')}Add to registry</button>`}<a class="btn" href="#registry">Back to registry</a></div></div>
+  <div class="dossier">
+    <div>
+      <div class="portrait-main" id="d-portrait">${renderPortrait(a, { size: 340, title: `${name} at ${age}` })}</div>
+      <div class="timeline">
+        <label class="field" for="d-age">Life timeline · viewing age <span class="mono" id="d-age-val">${age}</span></label>
+        <input type="range" id="d-age" min="6" max="90" value="${age}">
+        <div class="ticks mono"><span>6</span><span>30</span><span>60</span><span>90</span></div>
+        ${age !== base.age ? `<button class="btn" type="button" id="d-set-age">Record current age as ${age}</button>` : ''}
+      </div>
+    </div>
+    <div class="stack">
+      <div class="panel"><h2>Appearance</h2><p class="sub">Structured attributes. These never change with role, wealth or behaviour.</p>
+        <dl class="dl">
+          <dt>Skin</dt><dd><span class="dot" style="background:${base.skin.hex}"></span> ${cat.label}<br><span class="mono" style="font-size:13px;color:var(--ink-2)">tone ${base.skin.tone.toFixed(3)} · ${txt(base.skin.undertone)} undertone · ${base.skin.hex}</span></dd>
+          <dt>Hair</dt><dd><span class="dot" style="background:${v.hairHex}"></span> ${txt(base.hair.texture)}, ${txt(base.hair.color)}${v.grey > 0.15 ? ', greying' : ''}; worn ${txt(v.hairStyle)}</dd>
+          <dt>Eyes</dt><dd><span class="dot" style="background:${EYE_COLORS[base.eyes.color]}"></span> ${txt(base.eyes.color)}, ${base.eyes.lid} lids</dd>
+          <dt>Face</dt><dd>${base.face.shape} face; nose width ${base.face.noseWidth.toFixed(2)}, bridge ${base.face.noseBridge.toFixed(2)}; lips ${base.face.lipFullness.toFixed(2)}; cheekbones ${base.face.cheekbones.toFixed(2)}</dd>
+          <dt>Build</dt><dd>${base.body.build}, ${base.body.heightCm} cm${base.facialHair !== 'none' ? `; ${txt(base.facialHair)}` : ''}</dd>
+          <dt>Ancestry</dt><dd><div class="ancestry">${ancestry.map(([k, w]) => `<span style="width:${w * 100}%;background:${POOL_COLORS[k]}" title="${ANCESTRAL_POOLS[k].label} ${pct(w)}"></span>`).join('')}</div><span style="font-size:13px;color:var(--ink-2)">${ancestry.filter(([, w]) => w >= 0.05).map(([k, w]) => `${ANCESTRAL_POOLS[k].label} ${pct(w)}`).join(' · ')}</span></dd>
+        </dl>
+      </div>
+      <div class="panel"><h2>Life events</h2><p class="sub">Recorded at age ${base.age}. Skin, eyes and facial structure cannot be changed by events.</p>
+        ${history}
+        <form class="event-form" id="ev-form" style="margin-top:14px">
+          <label class="field">Event<select id="ev-type">${types}</select></label>
+          <label class="field" id="ev-extra-wrap">Detail<select id="ev-extra"></select></label>
+          <button class="btn primary" type="submit">Record event</button>
+        </form>
+      </div>
+      <div class="panel"><h2>Portrait identity</h2><p class="sub">Sent with every image-model request so this person stays recognisable in every scene.</p>
+        <div class="descriptor" id="d-desc">${esc(id.descriptor)}</div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn" type="button" id="copy-desc">${icon('copy')}Copy description</button></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function eventExtras(type, a) {
+  const sides = ['left', 'right'];
+  switch (type) {
+    case 'scar': return ['cheek', 'brow', 'chin'].flatMap((l) => sides.map((s) => [`${s}|${l}`, `${s} ${l}`]));
+    case 'tattoo': return [['|cheek', 'cheek'], ['|forehead', 'forehead'], ['|chin', 'chin']];
+    case 'eye-injury': return [['left|patch', 'left, eyepatch'], ['right|patch', 'right, eyepatch'], ['left|scar', 'left, scarred'], ['right|scar', 'right, scarred']];
+    case 'haircut': return stylesForTexture(a.hair.texture).map((s) => [s, txt(s)]);
+    case 'facial-hair': return ['none', 'stubble', 'moustache', 'short-beard', 'full-beard'].map((s) => [s, txt(s)]);
+    case 'weight-change': return [['1', 'gained weight'], ['-1', 'lost weight']];
+    default: return [];
+  }
+}
+
+function buildEvent(type, val, atAge) {
+  const e = { type, atAge };
+  const [p, q] = (val || '').split('|');
+  if (type === 'scar') Object.assign(e, { side: p, location: q });
+  if (type === 'tattoo') Object.assign(e, { location: q });
+  if (type === 'eye-injury') Object.assign(e, { side: p, patch: q === 'patch' });
+  if (type === 'haircut' || type === 'facial-hair') e.style = val;
+  if (type === 'weight-change') e.delta = Number(val);
+  return e;
+}
+
+// ---------------------------------------------------------------------------
+// Households, public life, events
+
+function renderHouseholds() {
+  const h = generateHousehold({ id: `hh:${state.region}:${state.partner}:${state.settlement}:${state.round}`, regionId: state.region, settlement: state.settlement, partnerRegionId: state.partner });
+  const members = track(h.members);
+  const plates = members.map((m, i) => plate(m, `${i < 2 ? `Parent · ${REGIONS[m.context.regionId].label}` : 'Child'} · ${m.age}`)).join('');
+  return `<div class="view-head"><div><div class="eyebrow">Households</div><h1>A family in ${REGIONS[state.region].label}</h1><p>Partners can come from different regions. Children take after both parents, and siblings still look like themselves.</p></div>
+    <div class="controls"><label class="field">Home region<select id="h-region">${regionOptions(state.region)}</select></label><label class="field">Partner's region<select id="h-partner">${regionOptions(state.partner)}</select></label><button class="btn" type="button" id="reroll">${icon('dice')}Another family</button></div></div>
+  <div class="panel"><div class="plates">${plates}</div></div>`;
+}
+
+const GROUPS = [
+  ['leaders', 'Leaders and officials', 'Heads of state, ministers, governors and magistrates'],
+  ['merchants', 'Merchants', 'Traders, shopkeepers and bankers'],
+  ['workers', 'Workers', 'Farmers, herders, fishers, artisans and labourers'],
+  ['soldiers', 'Soldiers', 'Soldiers and officers'],
+  ['scholars', 'Scholars', 'Scholars, physicians, engineers, teachers and priests'],
+];
+
+function renderPublic() {
+  const blocks = GROUPS.map(([g, title, sub]) => {
+    const people = track(representativeSample({ regionId: state.region, settlement: 'urban', count: 6, seed: `public:${g}:${state.round}`, oversample: 5 }));
+    return `<div class="panel"><h2>${title}</h2><p class="sub">${sub}</p><div class="plates">${people.map((a) => plate(a, assignRoleFromGroup({ seed: a.id, group: g }).label)).join('')}</div></div>`;
+  }).join('');
+  return `<div class="view-head"><div><div class="eyebrow">Public life</div><h1>Who serves in ${REGIONS[state.region].label}</h1><p>Roles are assigned on their own, without reference to appearance, so every group shows the region's full range.</p></div>
+    <div class="controls"><label class="field">Region<select id="p-region">${regionOptions(state.region)}</select></label><button class="btn" type="button" id="reroll">${icon('dice')}New faces</button></div></div>
+  <div class="stack">${blocks}</div>`;
+}
+
+const SCENE_EVENTS = {
+  plaza: 'The reading of the new water charter',
+  harbour: 'The spice fleet returns to harbour',
+  council: 'The regional council votes on the river accord',
+  market: 'First market day after the harvest',
+};
+
+function renderEvents() {
+  const settlement = state.scene === 'harbour' ? 'port' : state.scene === 'market' ? 'town' : 'urban';
+  const crowd = track(representativeSample({ regionId: state.region, settlement, count: 12, seed: `scene:${state.scene}:${state.round}`, oversample: 4 }));
+  const speaker = track(representativeSample({ regionId: state.region, settlement: 'urban', count: 3, seed: `speaker:${state.round}` }))[state.round % 3];
+  const title = `${SCENE_EVENTS[state.scene]}, ${REGIONS[state.region].label}`;
+  const seg = ['plaza', 'harbour', 'council', 'market'].map((s) => `<button type="button" data-scene="${s}" aria-pressed="${s === state.scene}">${s[0].toUpperCase() + s.slice(1)}</button>`).join('');
+  return `<div class="view-head"><div><div class="eyebrow">Event illustration</div><h1>${esc(SCENE_EVENTS[state.scene])}</h1><p>Scenes are composed from the same persistent residents, so anyone here looks the same in their dossier.</p></div>
+    <div class="controls"><label class="field">Region<select id="e-region">${regionOptions(state.region)}</select></label><div class="seg" role="group" aria-label="Setting">${seg}</div><button class="btn" type="button" id="reroll">${icon('dice')}Redraw</button></div></div>
+  <div class="stack">
+    <div class="scene">${renderScene(crowd, { setting: state.scene, title, speaker })}</div>
+    <div class="panel"><h2>In this scene</h2><p class="sub">Speaker first, then the crowd from back to front.</p><div class="plates">${[speaker, ...crowd].map((a, i) => plate(a, i === 0 ? 'Speaker' : assignRole({ seed: a.id, settlement }).label, { size: 160 })).join('')}</div></div>
+  </div>`;
+}
+
+// ---------------------------------------------------------------------------
+// Router and wiring
+
+const RENDER = { atlas: renderAtlas, census: renderCensus, registry: renderRegistry, dossier: renderDossier, households: renderHouseholds, public: renderPublic, events: renderEvents };
+
+function renderNav() {
+  const active = state.view === 'dossier' ? 'registry' : state.view;
+  $('#nav').innerHTML = VIEWS.map(([k, l]) => `<a href="#${k}" ${k === active ? 'aria-current="page"' : ''}>${icon(k)}<span>${l}</span></a>`).join('');
+}
+
+function render({ keepScroll = false } = {}) {
+  renderNav();
+  const y = window.scrollY;
+  $('#view').innerHTML = RENDER[state.view]();
+  wire();
+  if (!keepScroll) window.scrollTo(0, 0);
+  else window.scrollTo(0, y);
+}
+
+function go(view) {
+  if (location.hash.slice(1) !== view) location.hash = view;
+  else { state.view = view; render(); }
+}
+
+function openPerson(id) {
+  const a = lookup(id);
+  if (!a) return;
+  state.current = a;
+  state.viewAge = null;
+  if (location.hash.slice(1) === 'dossier') { state.view = 'dossier'; render(); } else location.hash = 'dossier';
+}
+
+let toastTimer;
+function toast(msg) {
+  let t = $('.toast');
+  if (!t) { t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); document.body.append(t); }
+  t.textContent = msg;
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, 2200);
+}
+
+function updatePerson(a) {
+  state.current = a;
+  if (state.people.has(a.id)) { state.people.set(a.id, a); saveRegistry(); } else transient.set(a.id, a);
+}
+
+function wire() {
+  document.querySelectorAll('[data-open]').forEach((el) => el.addEventListener('click', () => openPerson(el.dataset.open)));
+  document.querySelectorAll('[data-region]').forEach((el) => {
+    const act = () => { state.region = el.dataset.region; go('census'); };
+    el.addEventListener('click', act);
+    el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(); } });
+  });
+  document.querySelectorAll('[data-settlement]').forEach((el) => el.addEventListener('click', () => { state.settlement = el.dataset.settlement; render({ keepScroll: true }); }));
+  document.querySelectorAll('[data-scene]').forEach((el) => el.addEventListener('click', () => { state.scene = el.dataset.scene; render({ keepScroll: true }); }));
+  const on = (sel, ev, fn) => { const el = $(sel); if (el) el.addEventListener(ev, fn); };
+  on('#reroll', 'click', () => { state.round++; render({ keepScroll: true }); });
+  for (const id of ['#c-region', '#h-region', '#p-region', '#e-region']) on(id, 'change', (e) => { state.region = e.target.value; render({ keepScroll: true }); });
+  on('#h-partner', 'change', (e) => { state.partner = e.target.value; render({ keepScroll: true }); });
+  on('#f-q', 'input', (e) => {
+    state.filter.q = e.target.value;
+    const pos = e.target.selectionStart;
+    render({ keepScroll: true });
+    const el = $('#f-q'); el.focus(); el.setSelectionRange(pos, pos);
+  });
+  on('#f-region', 'change', (e) => { state.filter.region = e.target.value; render({ keepScroll: true }); });
+  on('#f-tone', 'change', (e) => { state.filter.tone = e.target.value; render({ keepScroll: true }); });
+
+  // Dossier
+  on('#add-reg', 'click', () => {
+    const a = { ...state.current };
+    delete a.example;
+    state.people.set(a.id, a);
+    transient.delete(a.id);
+    saveRegistry();
+    toast(`${personName(a.id)} added to the registry`);
+    render({ keepScroll: true });
+  });
+  on('#d-age', 'input', (e) => {
+    state.viewAge = Number(e.target.value);
+    const a = withAge(state.current, state.viewAge);
+    $('#d-age-val').textContent = state.viewAge;
+    $('#d-portrait').innerHTML = renderPortrait(a, { size: 340, title: `${personName(a.id)} at ${state.viewAge}` });
+  });
+  on('#d-age', 'change', () => render({ keepScroll: true }));
+  on('#d-set-age', 'click', () => {
+    updatePerson(withAge(state.current, state.viewAge));
+    state.viewAge = null;
+    toast('Age recorded');
+    render({ keepScroll: true });
+  });
+  const fillExtras = () => {
+    const type = $('#ev-type').value;
+    const opts = eventExtras(type, state.current);
+    $('#ev-extra').innerHTML = opts.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+    $('#ev-extra-wrap').hidden = !opts.length;
+  };
+  if ($('#ev-type')) { fillExtras(); on('#ev-type', 'change', fillExtras); }
+  on('#ev-form', 'submit', (e) => {
+    e.preventDefault();
+    const type = $('#ev-type').value;
+    updatePerson(applyEvent(state.current, buildEvent(type, $('#ev-extra').value, state.current.age)));
+    toast(`${EVENT_TYPES[type]} recorded`);
+    render({ keepScroll: true });
+  });
+  on('#copy-desc', 'click', async () => {
+    const text = $('#d-desc').textContent;
+    try { await navigator.clipboard.writeText(text); toast('Description copied'); } catch {
+      const r = document.createRange(); r.selectNodeContents($('#d-desc'));
+      const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+      toast('Selected. Press Ctrl+C or Cmd+C to copy');
+    }
+  });
+}
+
+// Theme toggle: system → light → dark
+const THEMES = ['system', 'light', 'dark'];
+let theme = 'system';
+try { theme = localStorage.getItem('iskar.theme') || 'system'; } catch { /* default */ }
+function applyTheme() {
+  if (theme === 'system') document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.setAttribute('data-theme', theme);
+  for (const id of ['#theme', '#theme-m']) { const b = $(id); if (b) b.textContent = `Theme: ${theme}`; }
+}
+for (const id of ['#theme', '#theme-m']) {
+  $(id)?.addEventListener('click', () => {
+    theme = THEMES[(THEMES.indexOf(theme) + 1) % 3];
+    try { localStorage.setItem('iskar.theme', theme); } catch { /* ignore */ }
+    applyTheme();
+  });
+}
+
+function fromHash() {
+  const h = location.hash.slice(1);
+  state.view = RENDER[h] ? h : 'atlas';
+  if (state.view === 'dossier' && !state.current) state.view = 'registry';
+  render();
+}
+window.addEventListener('hashchange', fromHash);
+
+loadRegistry();
+applyTheme();
+fromHash();
+
+return {  };
+})();
+})();
+</script>
+</body>
+</html>
