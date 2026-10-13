@@ -1,0 +1,13 @@
+{
+  "name": "iskar",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Iskar world simulation",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "test:ui": "node test/ui/screens.mjs",
+    "demo": "npx http-server . -p 8080 -c-1"
+  },
+  "engines": { "node": ">=20" }
+}

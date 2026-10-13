@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Iskar Population Viewer</title>
+<style>
+  :root {
+    --bg: #f6f3ee; --panel: #ffffff; --ink: #231f1b; --muted: #6b635b; --line: #e2dbd1; --accent: #7b4b2a;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #1b1916; --panel: #25221e; --ink: #efe9e1; --muted: #a79d92; --line: #3a352f; --accent: #e0a576; color-scheme: dark; }
+  }
+  :root[data-theme="dark"] { --bg: #1b1916; --panel: #25221e; --ink: #efe9e1; --muted: #a79d92; --line: #3a352f; --accent: #e0a576; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { padding: 16px; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+  header h1 { font-size: 20px; margin: 0 16px 0 0; flex: 1 1 100%; }
+  label { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
+  select, input, button { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; min-width: 0; max-width: 100%; }
+  button { cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  main { padding: 16px; display: grid; gap: 16px; max-width: 1280px; margin: 0 auto; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
+  section h2 { margin: 0 0 4px; font-size: 16px; }
+  section p.note { margin: 0 0 12px; color: var(--muted); font-size: 13px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 10px; }
+  .card { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--bg); cursor: pointer; padding: 0; text-align: left; display: block; width: 100%; }
+  .card svg { display: block; width: 100%; height: auto; }
+  .card .cap { padding: 6px 8px; font-size: 12px; line-height: 1.3; }
+  .card .cap b { display: block; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .card[aria-pressed="true"] { outline: 2px solid var(--accent); }
+  .dossier { display: grid; grid-template-columns: minmax(0, 260px) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .dossier .portrait svg { width: 100%; height: auto; border-radius: 8px; display: block; }
+  .ages { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+  .ages figure { margin: 0; font-size: 11px; color: var(--muted); text-align: center; }
+  .ages svg { width: 100%; height: auto; border-radius: 6px; }
+  dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 12px; margin: 0; font-size: 13px; }
+  dt { color: var(--muted); }
+  dd { margin: 0; overflow-wrap: anywhere; }
+  .swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -2px; border: 1px solid var(--line); margin-right: 4px; }
+  .descriptor { font-size: 12px; color: var(--muted); background: var(--bg); padding: 8px; border-radius: 6px; margin-top: 10px; overflow-wrap: anywhere; }
+  .actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .dist { display: flex; height: 18px; border-radius: 4px; overflow: hidden; margin: 6px 0 4px; }
+  .dist span { display: block; height: 100%; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11px; color: var(--muted); margin-bottom: 12px; }
+  .roles { display: grid; gap: 14px; }
+  .roles h3 { font-size: 13px; margin: 0 0 6px; color: var(--muted); font-weight: 600; }
+  .scene > svg { width: 100%; height: auto; display: block; border-radius: 8px; }
+  @media (max-width: 640px) {
+    .dossier { grid-template-columns: minmax(0, 1fr); }
+    .dossier .portrait { max-width: 260px; }
+    .grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+    main, header { padding: 12px 16px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Iskar population viewer</h1>
+  <label>Region<select id="region"></select></label>
+  <label>Settlement<select id="settlement"></select></label>
+  <label>Seed<input id="seed" value="iskar" size="8"></label>
+  <button id="reroll" type="button">New sample</button>
+</header>
+<main>
+  <section id="population" aria-labelledby="pop-h">
+    <h2 id="pop-h">Population preview</h2>
+    <p class="note">Drawn from this place's own demographic mix and spread across its full range of skin tones. Select anyone to open their dossier.</p>
+    <div class="dist" id="dist" aria-label="Skin-tone distribution"></div>
+    <div class="legend" id="legend"></div>
+    <div class="grid" id="pop-grid"></div>
+  </section>
+
+  <section id="dossier-section" aria-labelledby="dos-h">
+    <h2 id="dos-h">Character dossier</h2>
+    <div class="dossier">
+      <div>
+        <div class="portrait" id="dos-portrait"></div>
+        <div class="ages" id="dos-ages"></div>
+      </div>
+      <div>
+        <dl id="dos-attrs"></dl>
+        <div class="actions">
+          <button type="button" data-event="scar">Add scar</button>
+          <button type="button" data-event="spectacles">Spectacles</button>
+          <button type="button" data-event="haircut">New hairstyle</button>
+          <button type="button" data-event="age">+10 years</button>
+          <button type="button" data-event="reset">Reset</button>
+        </div>
+        <div class="descriptor" id="dos-desc"></div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="hh-h">
+    <h2 id="hh-h">Household</h2>
+    <p class="note">Partners may come from different regions. Children take after both parents and still look like individuals.</p>
+    <label style="max-width:240px">Partner's region<select id="partner"></select></label>
+    <div class="grid" id="household" style="margin-top:10px"></div>
+  </section>
+
+  <section aria-labelledby="roles-h">
+    <h2 id="roles-h">Public life</h2>
+    <p class="note">Roles are assigned independently of appearance.</p>
+    <div class="roles" id="roles"></div>
+  </section>
+
+  <section aria-labelledby="scene-h">
+    <h2 id="scene-h">Event illustration</h2>
+    <p class="note" id="scene-note"></p>
+    <div class="scene" id="scene"></div>
+  </section>
+</main>
+<script type="module" src="./app.js"></script>
+</body>
+</html>
